@@ -20,16 +20,44 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 QDRANT_PATH = "qdrant_db"
 COLLECTION_NAME = "aurora_womens_health"
 
-# ================= LANGUAGES ================= #
+# ================= LANGUAGES (INDIA FIRST) ================= #
 
 LANGUAGES = {
+    # 🇮🇳 Indian languages (priority)
     "English": "en",
     "Hindi": "hi",
-    "Tamil": "ta",
-    "Telugu": "te",
+    "Hinglish": "hinglish",
     "Bengali": "bn",
     "Marathi": "mr",
-    "Hinglish": "hinglish",
+    "Tamil": "ta",
+    "Telugu": "te",
+    "Gujarati": "gu",
+    "Kannada": "kn",
+    "Malayalam": "ml",
+    "Punjabi": "pa",
+    "Urdu": "ur",
+    "Odia": "or",
+    "Assamese": "as",
+    "Nepali": "ne",
+    "Konkani": "kok",
+    "Kashmiri": "ks",
+    "Sindhi": "sd",
+    "Maithili": "mai",
+    "Santali": "sat",
+    "Manipuri (Meitei)": "mni",
+    "Bodo": "brx",
+    "Dogri": "doi",
+
+    # 🌍 Global languages (optional)
+    "Spanish": "es",
+    "French": "fr",
+    "German": "de",
+    "Arabic": "ar",
+    "Portuguese": "pt",
+    "Indonesian": "id",
+    "Japanese": "ja",
+    "Korean": "ko",
+    "Chinese": "zh",
 }
 
 # ================= EMBEDDINGS ================= #
@@ -67,7 +95,7 @@ def groq_chat(messages, temperature=0.0) -> str:
     )
     return response.choices[0].message.content.strip()
 
-# ================= TRANSLATION (STRICT) ================= #
+# ================= TRANSLATION (FIXED & STRICT) ================= #
 
 def translate_to_english(text: str, src_lang: str) -> str:
     if src_lang == "en":
@@ -75,18 +103,19 @@ def translate_to_english(text: str, src_lang: str) -> str:
 
     if src_lang == "hinglish":
         instruction = (
-            "Translate the following Hinglish sentence into clear, natural English. "
+            "Translate the following Hinglish (Hindi written in English letters) "
+            "into clear, natural English. "
             "Do not explain. Output ONLY the translated sentence."
         )
     else:
         instruction = (
-            "Translate the following text into English. "
-            "Do not explain. Output ONLY the translated text."
+            "Translate the following text into clear, natural English. "
+            "Do not explain. Output ONLY the translated sentence."
         )
 
     return groq_chat(
         [
-            {"role": "system", "content": "You are a professional translation engine."},
+            {"role": "system", "content": "You are a strict translation engine."},
             {"role": "user", "content": f"{instruction}\n\n{text}"}
         ]
     )
@@ -96,24 +125,64 @@ def translate_from_english(text: str, tgt_lang: str) -> str:
     if tgt_lang == "en":
         return text
 
+    # Hinglish special handling
     if tgt_lang == "hinglish":
         instruction = (
             "Translate the following English text into Hinglish "
-            "(Hindi written using English letters). "
+            "(Hindi language written using English letters). "
             "Do not explain. Output ONLY the translated sentence."
         )
+
+    # Indian language scripts (force native script)
+    elif tgt_lang == "hi":
+        instruction = (
+            "Translate the following English text into Hindi "
+            "using Devanagari script. "
+            "Do not explain. Output ONLY the translated sentence."
+        )
+
+    elif tgt_lang == "bn":
+        instruction = (
+            "Translate the following English text into Bengali "
+            "using Bengali script. "
+            "Do not explain. Output ONLY the translated sentence."
+        )
+
+    elif tgt_lang == "ta":
+        instruction = (
+            "Translate the following English text into Tamil "
+            "using Tamil script. "
+            "Do not explain. Output ONLY the translated sentence."
+        )
+
+    elif tgt_lang == "te":
+        instruction = (
+            "Translate the following English text into Telugu "
+            "using Telugu script. "
+            "Do not explain. Output ONLY the translated sentence."
+        )
+
+    elif tgt_lang == "mr":
+        instruction = (
+            "Translate the following English text into Marathi "
+            "using Devanagari script. "
+            "Do not explain. Output ONLY the translated sentence."
+        )
+
     else:
+        # Global languages
         instruction = (
             f"Translate the following English text into {tgt_lang}. "
-            "Do not explain. Output ONLY the translated text."
+            "Do not explain. Output ONLY the translated sentence."
         )
 
     return groq_chat(
         [
-            {"role": "system", "content": "You are a professional translation engine."},
+            {"role": "system", "content": "You are a strict translation engine."},
             {"role": "user", "content": f"{instruction}\n\n{text}"}
         ]
     )
+
 
 # ================= ROUTER ================= #
 
@@ -122,6 +191,7 @@ def route_query(query: str) -> str:
 Classify this women's healthcare query into ONE category:
 
 greeting
+farewell
 daily_symptom_support
 holistic_wellness_lifestyle
 hormonal_life_stages
@@ -129,6 +199,10 @@ mental_emotional_resilience
 preventive_care_screening
 safety_support_advocacy
 out_of_scope
+
+Rules:
+- bye, goodbye, see you, exit → farewell
+- hi, hello → greeting
 
 Query:
 {query}
@@ -206,24 +280,18 @@ lang_code = LANGUAGES[selected_language]
 
 if "chat_en" not in st.session_state:
     st.session_state.chat_en = [
-        {
-            "role": "assistant",
-            "content": "Hello, I’m Aurora. How can I support your health today?"
-        }
+        {"role": "assistant", "content": "Hello, I’m Aurora. How can I support your health today?"}
     ]
 
 if "history_en" not in st.session_state:
     st.session_state.history_en = [
-        {
-            "role": "system",
-            "content": "You are Aurora, a calm women’s healthcare assistant."
-        }
+        {"role": "system", "content": "You are Aurora, a calm women’s healthcare assistant."}
     ]
 
 if "has_interacted" not in st.session_state:
     st.session_state.has_interacted = False
 
-# ================= CHAT RENDER (LIVE TRANSLATION) ================= #
+# ================= CHAT RENDER ================= #
 
 for msg in st.session_state.chat_en:
     translated = translate_from_english(msg["content"], lang_code)
@@ -235,30 +303,24 @@ for msg in st.session_state.chat_en:
 user_input = st.chat_input("Ask about women’s health...")
 
 if user_input:
-    # Translate user input to English
     user_input_en = translate_to_english(user_input, lang_code)
 
-    # 1️⃣ Show user message immediately
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # Save backend history (English)
-    st.session_state.chat_en.append(
-        {"role": "user", "content": user_input_en}
-    )
-    st.session_state.history_en.append(
-        {"role": "user", "content": user_input_en}
-    )
+    st.session_state.chat_en.append({"role": "user", "content": user_input_en})
+    st.session_state.history_en.append({"role": "user", "content": user_input_en})
 
-    # 2️⃣ Show temporary assistant placeholder
     with st.chat_message("assistant"):
         placeholder = st.empty()
         placeholder.markdown("Answering…")
 
-    # ---- LLM work (NO UI rendering here) ----
     category = route_query(user_input_en)
 
-    if category == "greeting":
+    if category == "farewell":
+        answer_en = "Take care. If you need support in the future, I’ll be here."
+
+    elif category == "greeting":
         answer_en = (
             "Welcome back. How can I support you today?"
             if st.session_state.has_interacted
@@ -267,32 +329,22 @@ if user_input:
 
     elif category == "out_of_scope":
         answer_en = (
-            "I focus on women’s healthcare topics such as symptoms, hormones, "
-            "mental wellbeing, pregnancy, and preventive care."
+            "I focus specifically on women’s healthcare topics. "
+            "If you have a related question, I’ll be glad to help."
         )
 
     else:
-        answer_en = get_rag_answer(
-            user_input_en,
-            st.session_state.history_en
-        )
+        answer_en = get_rag_answer(user_input_en, st.session_state.history_en)
 
     final_answer = translate_from_english(answer_en, lang_code)
 
-    # 3️⃣ Remove "Answering…"
     placeholder.empty()
 
-    # 4️⃣ Render final assistant message CLEANLY
     with st.chat_message("assistant"):
         st.markdown(final_answer)
 
-    # Save backend history
-    st.session_state.chat_en.append(
-        {"role": "assistant", "content": answer_en}
-    )
-    st.session_state.history_en.append(
-        {"role": "assistant", "content": answer_en}
-    )
+    st.session_state.chat_en.append({"role": "assistant", "content": answer_en})
+    st.session_state.history_en.append({"role": "assistant", "content": answer_en})
 
     st.session_state.has_interacted = True
     st.rerun()
