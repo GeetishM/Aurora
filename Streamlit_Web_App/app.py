@@ -95,7 +95,21 @@ def groq_chat(messages, temperature=0.0) -> str:
     )
     return response.choices[0].message.content.strip()
 
-# ================= TRANSLATION (FIXED & STRICT) ================= #
+# ================= TRANSLATION (PRODUCTION SAFE) ================= #
+
+LANG_META = {
+    "hi": {"name": "Hindi", "script": "Devanagari"},
+    "kn": {"name": "Kannada", "script": "Kannada"},
+    "ta": {"name": "Tamil", "script": "Tamil"},
+    "te": {"name": "Telugu", "script": "Telugu"},
+    "bn": {"name": "Bengali", "script": "Bengali"},
+    "mr": {"name": "Marathi", "script": "Devanagari"},
+    "gu": {"name": "Gujarati", "script": "Gujarati"},
+    "ml": {"name": "Malayalam", "script": "Malayalam"},
+    "pa": {"name": "Punjabi", "script": "Gurmukhi"},
+    "ur": {"name": "Urdu", "script": "Arabic"},
+}
+
 
 def translate_to_english(text: str, src_lang: str) -> str:
     if src_lang == "en":
@@ -103,7 +117,7 @@ def translate_to_english(text: str, src_lang: str) -> str:
 
     if src_lang == "hinglish":
         instruction = (
-            "Translate the following Hinglish (Hindi written in English letters) "
+            "Translate the following Hinglish (Hindi written using English letters) "
             "into clear, natural English. "
             "Do not explain. Output ONLY the translated sentence."
         )
@@ -125,7 +139,6 @@ def translate_from_english(text: str, tgt_lang: str) -> str:
     if tgt_lang == "en":
         return text
 
-    # Hinglish special handling
     if tgt_lang == "hinglish":
         instruction = (
             "Translate the following English text into Hinglish "
@@ -133,46 +146,17 @@ def translate_from_english(text: str, tgt_lang: str) -> str:
             "Do not explain. Output ONLY the translated sentence."
         )
 
-    # Indian language scripts (force native script)
-    elif tgt_lang == "hi":
+    elif tgt_lang in LANG_META:
+        meta = LANG_META[tgt_lang]
         instruction = (
-            "Translate the following English text into Hindi "
-            "using Devanagari script. "
-            "Do not explain. Output ONLY the translated sentence."
-        )
-
-    elif tgt_lang == "bn":
-        instruction = (
-            "Translate the following English text into Bengali "
-            "using Bengali script. "
-            "Do not explain. Output ONLY the translated sentence."
-        )
-
-    elif tgt_lang == "ta":
-        instruction = (
-            "Translate the following English text into Tamil "
-            "using Tamil script. "
-            "Do not explain. Output ONLY the translated sentence."
-        )
-
-    elif tgt_lang == "te":
-        instruction = (
-            "Translate the following English text into Telugu "
-            "using Telugu script. "
-            "Do not explain. Output ONLY the translated sentence."
-        )
-
-    elif tgt_lang == "mr":
-        instruction = (
-            "Translate the following English text into Marathi "
-            "using Devanagari script. "
+            f"Translate the following English text into {meta['name']} "
+            f"using {meta['script']} script. "
             "Do not explain. Output ONLY the translated sentence."
         )
 
     else:
-        # Global languages
         instruction = (
-            f"Translate the following English text into {tgt_lang}. "
+            "Translate the following English text into the target language. "
             "Do not explain. Output ONLY the translated sentence."
         )
 
@@ -182,6 +166,7 @@ def translate_from_english(text: str, tgt_lang: str) -> str:
             {"role": "user", "content": f"{instruction}\n\n{text}"}
         ]
     )
+
 
 
 # ================= ROUTER ================= #
