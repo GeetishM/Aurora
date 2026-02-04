@@ -98,17 +98,41 @@ def groq_chat(messages, temperature=0.0) -> str:
 # ================= TRANSLATION (PRODUCTION SAFE) ================= #
 
 LANG_META = {
-    "hi": {"name": "Hindi", "script": "Devanagari"},
-    "kn": {"name": "Kannada", "script": "Kannada"},
-    "ta": {"name": "Tamil", "script": "Tamil"},
-    "te": {"name": "Telugu", "script": "Telugu"},
-    "bn": {"name": "Bengali", "script": "Bengali"},
-    "mr": {"name": "Marathi", "script": "Devanagari"},
-    "gu": {"name": "Gujarati", "script": "Gujarati"},
-    "ml": {"name": "Malayalam", "script": "Malayalam"},
-    "pa": {"name": "Punjabi", "script": "Gurmukhi"},
-    "ur": {"name": "Urdu", "script": "Arabic"},
+    # 🇮🇳 Indian languages
+    "hi":  {"name": "Hindi", "script": "Devanagari"},
+    "bn":  {"name": "Bengali", "script": "Bengali"},
+    "mr":  {"name": "Marathi", "script": "Devanagari"},
+    "ta":  {"name": "Tamil", "script": "Tamil"},
+    "te":  {"name": "Telugu", "script": "Telugu"},
+    "gu":  {"name": "Gujarati", "script": "Gujarati"},
+    "kn":  {"name": "Kannada", "script": "Kannada"},
+    "ml":  {"name": "Malayalam", "script": "Malayalam"},
+    "pa":  {"name": "Punjabi", "script": "Gurmukhi"},
+    "ur":  {"name": "Urdu", "script": "Arabic"},
+    "or":  {"name": "Odia", "script": "Odia"},
+    "as":  {"name": "Assamese", "script": "Bengali-Assamese"},
+    "ne":  {"name": "Nepali", "script": "Devanagari"},
+    "kok": {"name": "Konkani", "script": "Devanagari"},
+    "ks":  {"name": "Kashmiri", "script": "Arabic"},
+    "sd":  {"name": "Sindhi", "script": "Arabic"},
+    "mai": {"name": "Maithili", "script": "Devanagari"},
+    "sat": {"name": "Santali", "script": "Ol Chiki"},
+    "mni": {"name": "Manipuri (Meitei)", "script": "Meitei Mayek"},
+    "brx": {"name": "Bodo", "script": "Devanagari"},
+    "doi": {"name": "Dogri", "script": "Devanagari"},
+
+    # 🌍 Global languages
+    "es": {"name": "Spanish", "script": "Latin"},
+    "fr": {"name": "French", "script": "Latin"},
+    "de": {"name": "German", "script": "Latin"},
+    "ar": {"name": "Arabic", "script": "Arabic"},
+    "pt": {"name": "Portuguese", "script": "Latin"},
+    "id": {"name": "Indonesian", "script": "Latin"},
+    "ja": {"name": "Japanese", "script": "Japanese"},
+    "ko": {"name": "Korean", "script": "Hangul"},
+    "zh": {"name": "Chinese", "script": "Simplified Chinese"},
 }
+
 
 
 def translate_to_english(text: str, src_lang: str) -> str:
@@ -162,7 +186,7 @@ def translate_from_english(text: str, tgt_lang: str) -> str:
 
     return groq_chat(
         [
-            {"role": "system", "content": "You are a strict translation engine."},
+            {"role": "system", "content": "You are a professional translation engine."},
             {"role": "user", "content": f"{instruction}\n\n{text}"}
         ]
     )
@@ -248,6 +272,107 @@ Rules:
 # ================= UI ================= #
 
 st.set_page_config(page_title="Aurora 🌸", layout="wide")
+
+# ================= Background color ================= #
+
+# st.markdown(
+# """
+# <style>
+
+# /* ===== FULL RESET ===== */
+# html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
+#     height: 100%;
+#     width: 100%;
+#     margin: 0;
+#     padding: 0;
+#     background: transparent;
+# }
+
+# /* Hide Streamlit header bar */
+# header { visibility: hidden; }
+
+# /* Remove container padding */
+# .block-container {
+#     padding-top: 0 !important;
+#     padding-bottom: 0 !important;
+#     max-width: 100% !important;
+# }
+
+# /* ===== NORTHERN LIGHTS SIDEWAYS FLOW ===== */
+# @keyframes auroraFlow {
+#     0%   { background-position: 0% 50%, 0% 50%, 0% 50%, 0% 0%; }
+#     50%  { background-position: 100% 50%, 80% 60%, 60% 40%, 100% 100%; }
+#     100% { background-position: 0% 50%, 0% 50%, 0% 50%, 0% 0%; }
+# }
+
+# /* ===== FULLSCREEN AURORA ===== */
+# .stApp {
+#     min-height: 100vh;
+#     background:
+#         linear-gradient(
+#             120deg,
+#             rgba(0, 255, 180, 0.35),
+#             rgba(0, 180, 255, 0.35),
+#             rgba(120, 255, 220, 0.25),
+#             rgba(0, 140, 200, 0.3)
+#         ),
+#         radial-gradient(60% 120% at 10% 50%, rgba(0, 255, 200, 0.35), transparent 60%),
+#         radial-gradient(50% 100% at 90% 60%, rgba(0, 180, 255, 0.35), transparent 65%),
+#         linear-gradient(180deg, #020814 0%, #041a2d 50%, #020814 100%);
+
+#     background-size: 400% 400%;
+#     animation: auroraFlow 40s linear infinite;
+#     color: #eef2f7;
+# }
+
+# /* ===== CHAT MESSAGES ===== */
+# .stChatMessage {
+#     background: rgba(255, 255, 255, 0.08);
+#     backdrop-filter: blur(12px);
+#     border-radius: 14px;
+#     padding: 12px;
+#     box-shadow: 0 0 24px rgba(0, 255, 200, 0.15);
+# }
+
+# /* ===== INPUT AREA (NO BLACK BAR) ===== */
+# section[data-testid="stChatInput"] {
+#     background: transparent !important;
+# }
+
+# textarea {
+#     background: rgba(5, 18, 35, 0.85) !important;
+#     color: #ffffff !important;
+#     border-radius: 14px !important;
+#     border: 1px solid rgba(0, 255, 200, 0.45) !important;
+# }
+
+# /* Placeholder */
+# textarea::placeholder {
+#     color: #a8b2c1;
+# }
+
+# /* ===== DROPDOWN ===== */
+# div[data-baseweb="select"] > div {
+#     background: rgba(5, 18, 35, 0.85);
+#     border: 1px solid rgba(0, 255, 200, 0.4);
+#     border-radius: 12px;
+#     color: white;
+# }
+
+# /* ===== TITLE GLOW ===== */
+# h1 {
+#     text-shadow: 
+#         0 0 10px rgba(0, 255, 200, 0.35),
+#         0 0 30px rgba(0, 200, 255, 0.25);
+# }
+
+# </style>
+# """,
+# unsafe_allow_html=True
+# )
+
+
+# ================= HEADER ================= #
 
 col1, col2 = st.columns([0.82, 0.18])
 with col1:
