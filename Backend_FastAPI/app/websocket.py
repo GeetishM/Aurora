@@ -1,0 +1,63 @@
+from fastapi import WebSocket, WebSocketDisconnect
+from .translate import translate_to_english, translate_from_english
+from .router import route_query
+from .rag import get_rag_answer
+
+
+async def chat_socket(ws: WebSocket):
+    await ws.accept()
+    history = []
+
+    try:
+        while True:
+            try:
+                data = await ws.receive_json()
+            except WebSocketDisconnect:
+                print("WebSocket disconnected by client")
+                break
+            except Exception:
+                # non-JSON or empty frame
+                await ws.send_json({"error": "Invalid message format"})
+                continue
+
+            message = data.get("message")
+            language = data.get("language", "en")
+
+            if not message:
+                await ws.send_json({"error": "Message cannot be empty"})
+                continue
+
+            user_en = translate_to_english(message, language)
+            history.append(f"user: {user_en}")
+
+            category = route_query(user_en)
+
+            if category == "out_of_scope":
+                answer_en = (
+                    "I’m here to help with women’s health–related questions only. "
+                    "I can’t assist with this topic."
+                )
+
+            elif category == "greeting":
+                answer_en = "Hello. How can I support you today?"
+
+            elif category == "farewell":
+                answer_en = "Take care. I’m here whenever you need support."
+
+            else:
+                # ONLY here RAG is allowed
+                answer_en = get_rag_answer(user_en, history)
+
+
+            history.append(f"assistant: {answer_en}")
+
+            final = translate_from_english(answer_en, language)
+
+            await ws.send_json({
+                "type": "final",
+                "text": final
+            })
+
+    finally:
+        await ws.close()
+        print("WebSocket closed cleanly")

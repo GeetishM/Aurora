@@ -1,0 +1,9 @@
+Backend_FastAPI/data/Aurora_Datasets/
+Backend_FastAPI/data/qdrant_db/
+
+__pycache__/
+*/__pycache__/
+Backend_FastAPI/**/__pycache__/
+
+.env
+*.env
