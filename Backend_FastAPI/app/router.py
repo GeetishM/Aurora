@@ -1,15 +1,30 @@
-from groq import Groq
-import os
+import re
 from .llm import groq_chat
 
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+MATH_PATTERN = re.compile(
+    r"\b(\d+\s*[\+\-\*/%]\s*\d+|\d+\s*(plus|minus|times|multiply|divide|mod)\s*\d+)\b",
+    re.IGNORECASE
+)
+
+CODING_PATTERN = re.compile(
+    r"\b("
+    r"python|java|c\+\+|javascript|typescript|sql|html|css|flutter|dart|"
+    r"function|class|def|return|for|while|if|else|import|print|console"
+    r")\b|[{}();<>]",
+    re.IGNORECASE
+)
+
+def is_hard_out_of_scope(query: str) -> bool:
+    return bool(
+        MATH_PATTERN.search(query) or CODING_PATTERN.search(query)
+    )
 
 def route_query(query: str) -> str:
+    if is_hard_out_of_scope(query):
+        return "out_of_scope"
+
     prompt = f"""
 You are a strict classifier for a women's healthcare assistant.
-
-Your task:
-Classify the query into EXACTLY ONE category from the list below.
 
 Allowed categories:
 greeting
@@ -22,17 +37,10 @@ preventive_care_screening
 safety_support_advocacy
 out_of_scope
 
-STRICT RULES:
-- ANY math, arithmetic, numbers, calculations → out_of_scope
-- ANY coding, programming, algorithms → out_of_scope
-- ANY general knowledge not about women's health → out_of_scope
-- hi, hello → greeting
-- bye, goodbye, exit → farewell
-
 Query:
 {query}
 
-Return ONLY the category name. No explanation.
+Return ONLY the category name.
 """
     return groq_chat(
         [{"role": "user", "content": prompt}],
