@@ -3,7 +3,8 @@ from dotenv import load_dotenv
 from groq import Groq
 from langchain_core.prompts import ChatPromptTemplate
 
-from Backend_FastAPI.app.llm import groq_chat_stream
+from .llm import groq_chat_stream
+
 from .qdrant_store import load_vectorstore
 
 load_dotenv()

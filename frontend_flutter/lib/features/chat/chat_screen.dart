@@ -1,8 +1,6 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-
-import '../../core/storage/boxes.dart';
+import 'package:provider/provider.dart';
+import '../../state/chat_controller.dart';
 import '../../models/message.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -20,69 +18,31 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final controller = TextEditingController();
-  final scrollController = ScrollController();
+  final _textController = TextEditingController();
+  final _scrollController = ScrollController();
 
-  List<Message> get messages =>
-      HiveBoxes.messagesBox()
-          .values
-          .where((m) => m.chatId == widget.chatId)
-          .toList()
-        ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+  @override
+  void initState() {
+    super.initState();
 
-  void sendMessage() {
-    final text = controller.text.trim();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ChatController>().loadChat(widget.chatId);
+    });
+  }
+
+  void _sendMessage(ChatController controller) {
+    final text = _textController.text.trim();
     if (text.isEmpty) return;
 
-    final userMessage = Message(
-      id: DateTime.now().toIso8601String(),
-      chatId: widget.chatId,
-      text: text,
-      isUser: true,
-      timestamp: DateTime.now(),
-    );
-
-    HiveBoxes.messagesBox().add(userMessage);
-    controller.clear();
-    updateChatHistory(text);
-
-    Future.delayed(const Duration(milliseconds: 500), () {
-      final botMessage = Message(
-        id: DateTime.now().toIso8601String(),
-        chatId: widget.chatId,
-        text: "I’m Aurora. This is a preview response.",
-        isUser: false,
-        timestamp: DateTime.now(),
-      );
-
-      HiveBoxes.messagesBox().add(botMessage);
-      updateChatHistory(botMessage.text);
-    });
-
-    scrollToBottom();
+    controller.sendMessage(text);
+    _textController.clear();
   }
 
-  void updateChatHistory(String lastMessage) {
-    final box = HiveBoxes.chatHistoryBox();
-    final index =
-        box.values.toList().indexWhere((c) => c.chatId == widget.chatId);
-
-    if (index != -1) {
-      final chat = box.getAt(index)!;
-      chat
-        ..lastMessage = lastMessage
-        ..updatedAt = DateTime.now()
-        ..save();
-    }
-  }
-
-  void scrollToBottom() {
+  void _autoScroll() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (scrollController.hasClients) {
-        scrollController.animateTo(
-          scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(
+          _scrollController.position.maxScrollExtent,
         );
       }
     });
@@ -90,82 +50,99 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: ValueListenableBuilder(
-            valueListenable: HiveBoxes.messagesBox().listenable(),
-            builder: (context, box, _) {
-              final msgs = messages;
+    return Scaffold(   // ✅ THIS FIXES YOUR ERROR
+      appBar: AppBar(
+        title: Text(widget.chatTitle.isEmpty ? "Aurora" : widget.chatTitle),
+      ),
+      body: Consumer<ChatController>(
+        builder: (context, controller, _) {
+          final messages = controller.messages;
 
-              if (msgs.isEmpty) {
-                return const Center(
-                  child: Text('Start the conversation'),
-                );
-              }
+          _autoScroll();
 
-              return ListView.builder(
-                controller: scrollController,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                itemCount: msgs.length,
-                itemBuilder: (context, index) {
-                  final msg = msgs[index];
+          return Column(
+            children: [
+              Expanded(
+                child: messages.isEmpty
+                    ? const Center(
+                        child: Text("Start the conversation"),
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 20,
+                        ),
+                        itemCount: messages.length,
+                        itemBuilder: (context, index) {
+                          final Message msg = messages[index];
 
-                  return Align(
-                    alignment: msg.isUser
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(14),
-                      constraints:
-                          const BoxConstraints(maxWidth: 500),
-                      decoration: BoxDecoration(
-                        color: msg.isUser
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(12),
+                          return Align(
+                            alignment: msg.isUser
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Container(
+                              margin:
+                                  const EdgeInsets.only(bottom: 12),
+                              padding:
+                                  const EdgeInsets.all(14),
+                              constraints:
+                                  const BoxConstraints(
+                                      maxWidth: 500),
+                              decoration: BoxDecoration(
+                                color: msg.isUser
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                    : Colors.grey.shade300,
+                                borderRadius:
+                                    BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                msg.text,
+                                style: TextStyle(
+                                  color: msg.isUser
+                                      ? Colors.white
+                                      : Colors.black87,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                      child: Text(
-                        msg.text,
-                        style: TextStyle(
-                          color: msg.isUser
-                              ? Colors.white
-                              : Colors.black87,
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _textController,
+                        onSubmitted: (_) =>
+                            _sendMessage(controller),
+                        decoration:
+                            const InputDecoration(
+                          hintText: "Message Aurora...",
+                          border:
+                              OutlineInputBorder(),
                         ),
                       ),
                     ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-        const Divider(height: 1),
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  onSubmitted: (_) => sendMessage(),
-                  decoration: const InputDecoration(
-                    hintText: "Message Aurora...",
-                    border: OutlineInputBorder(),
-                  ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon:
+                          const Icon(Icons.send),
+                      onPressed: () =>
+                          _sendMessage(controller),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.send),
-                onPressed: sendMessage,
-              ),
             ],
-          ),
-        ),
-      ],
+          );
+        },
+      ),
     );
   }
 }

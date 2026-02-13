@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:frontend_flutter/app/app.dart';
-import 'package:frontend_flutter/core/storage/hive_service.dart';
+import 'package:provider/provider.dart';
+
+import 'app/app.dart';
+import 'core/storage/hive_service.dart';
+import 'state/chat_controller.dart';
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await HiveService.init();
-  runApp(const AuroraApp());
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ChatController(),
+      child: const AuroraApp(),
+    ),
+  );
 }

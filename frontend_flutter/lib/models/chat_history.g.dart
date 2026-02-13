@@ -2,6 +2,10 @@
 
 part of 'chat_history.dart';
 
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
+
 class ChatHistoryAdapter extends TypeAdapter<ChatHistory> {
   @override
   final int typeId = 1;
@@ -12,7 +16,6 @@ class ChatHistoryAdapter extends TypeAdapter<ChatHistory> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-
     return ChatHistory(
       chatId: fields[0] as String,
       title: fields[1] as String,
@@ -34,4 +37,14 @@ class ChatHistoryAdapter extends TypeAdapter<ChatHistory> {
       ..writeByte(3)
       ..write(obj.updatedAt);
   }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ChatHistoryAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
 }

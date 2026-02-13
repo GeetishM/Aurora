@@ -11,7 +11,7 @@ class Message extends HiveObject {
   final String chatId;
 
   @HiveField(2)
-  final String text;
+  String text;
 
   @HiveField(3)
   final bool isUser;

@@ -2,6 +2,10 @@
 
 part of 'message.dart';
 
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
+
 class MessageAdapter extends TypeAdapter<Message> {
   @override
   final int typeId = 3;
@@ -12,7 +16,6 @@ class MessageAdapter extends TypeAdapter<Message> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-
     return Message(
       id: fields[0] as String,
       chatId: fields[1] as String,
@@ -37,4 +40,14 @@ class MessageAdapter extends TypeAdapter<Message> {
       ..writeByte(4)
       ..write(obj.timestamp);
   }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MessageAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
 }

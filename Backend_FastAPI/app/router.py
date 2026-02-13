@@ -15,18 +15,37 @@ CODING_PATTERN = re.compile(
 )
 
 def is_hard_out_of_scope(query: str) -> bool:
-    return bool(
-        MATH_PATTERN.search(query) or CODING_PATTERN.search(query)
-    )
+    # block only real arithmetic expressions
+    if MATH_PATTERN.search(query) and any(op in query for op in ['+', '-', '*', '/', '%']):
+        return True
+
+    # block programming / code
+    if CODING_PATTERN.search(query):
+        return True
+
+    return False
 
 def route_query(query: str) -> str:
-    if is_hard_out_of_scope(query):
-        return "out_of_scope"
-
     prompt = f"""
-You are a strict classifier for a women's healthcare assistant.
+You are a routing assistant for a women's healthcare chatbot.
 
-Allowed categories:
+IMPORTANT:
+If the query is related to:
+- women’s body
+- periods or menstruation
+- hormones or life stages
+- mental or emotional health
+- lifestyle or wellness
+- safety or support
+
+DO NOT classify it as out_of_scope.
+
+ONLY classify as out_of_scope if it is:
+- mathematics or calculations
+- programming or coding
+- unrelated general knowledge
+
+Categories:
 greeting
 farewell
 daily_symptom_support

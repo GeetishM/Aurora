@@ -6,6 +6,7 @@ from .rag import get_rag_answer_stream
 
 async def chat_socket(ws: WebSocket):
     await ws.accept()
+    print("Socket accepted")
     history = []
 
     try:

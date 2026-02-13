@@ -1,141 +1,103 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-
-import '../../core/storage/boxes.dart';
+import 'package:provider/provider.dart';
+import '../../state/chat_controller.dart';
 import '../../models/chat_history.dart';
+import '../../core/storage/boxes.dart';
 import 'chat_screen.dart';
 
-class ChatHistoryScreen extends StatefulWidget {
+class ChatHistoryScreen extends StatelessWidget {
   const ChatHistoryScreen({super.key});
 
   @override
-  State<ChatHistoryScreen> createState() => _ChatHistoryScreenState();
-}
-
-class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
-  int selectedIndex = 0;
-
-  void createNewChat() {
-    final chatId = DateTime.now().millisecondsSinceEpoch.toString();
-
-    final chat = ChatHistory(
-      chatId: chatId,
-      title: 'New Chat',
-      lastMessage: '',
-      updatedAt: DateTime.now(),
-    );
-
-    HiveBoxes.chatHistoryBox().add(chat);
-    setState(() {
-      selectedIndex = HiveBoxes.chatHistoryBox().length - 1;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width >= 900;
+    final box = HiveBoxes.chatHistoryBox();
 
-    Widget sidebar = Container(
-      width: 280,
-      color: const Color(0xFF202123),
-      child: Column(
-        children: [
-          const SizedBox(height: 40),
-          const Text(
-            'Aurora',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: createNewChat,
-            child: const Text('New Chat'),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: ValueListenableBuilder(
-              valueListenable:
-                  HiveBoxes.chatHistoryBox().listenable(),
-              builder: (context, box, _) {
-                if (box.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'No chats yet',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                  );
-                }
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Aurora"),
+      ),
+      drawer: Drawer(
+        child: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              const Text(
+                "Chats",
+                style: TextStyle(fontSize: 18),
+              ),
+              const Divider(),
+              
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: const Text("New Chat"),
+                  onPressed: () {
+                    final controller = context.read<ChatController>();
+                    controller.createNewChat();
 
-                return ListView.builder(
-                  itemCount: box.length,
-                  itemBuilder: (context, index) {
-                    final chat = box.getAt(index)!;
-                    final isSelected = index == selectedIndex;
-
-                    return ListTile(
-                      selected: isSelected,
-                      selectedTileColor: Colors.white10,
-                      title: Text(
-                        chat.title,
-                        style: TextStyle(
-                          color:
-                              isSelected ? Colors.white : Colors.white70,
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChatScreen(
+                          chatId: controller.currentChatId!,
+                          chatTitle: "New Chat",
                         ),
                       ),
-                      subtitle: Text(
-                        chat.lastMessage,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white38),
-                      ),
-                      onTap: () {
-                        setState(() => selectedIndex = index);
-                        if (!isWide) Navigator.pop(context);
+                    );
+                  },
+                ),
+              ),
+
+              const Divider(),
+              Expanded(
+                child: ValueListenableBuilder(
+                  valueListenable: box.listenable(),
+                  builder: (context, _, __) {
+                    final chats = box.values.toList()
+                      ..sort((a, b) =>
+                          b.updatedAt.compareTo(a.updatedAt));
+
+                    return ListView.builder(
+                      itemCount: chats.length,
+                      itemBuilder: (context, index) {
+                        final ChatHistory chat =
+                            chats[index];
+
+                        return ListTile(
+                          title: Text(chat.title),
+                          subtitle: Text(
+                            chat.lastMessage,
+                            maxLines: 1,
+                            overflow:
+                                TextOverflow.ellipsis,
+                          ),
+                          onTap: () {
+                            Navigator.pop(context);
+
+                            WidgetsBinding.instance
+                                .addPostFrameCallback((_) {
+                              context
+                                  .read<ChatController>()
+                                  .loadChat(chat.chatId);
+                            });
+                          },
+                        );
                       },
                     );
                   },
-                );
-              },
-            ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-
-    Widget chatArea = ValueListenableBuilder(
-      valueListenable: HiveBoxes.chatHistoryBox().listenable(),
-      builder: (context, box, _) {
-        if (box.isEmpty) {
-          return const Center(child: Text('Start a new chat'));
-        }
-
-        final chat = box.getAt(selectedIndex)!;
-
-        return ChatScreen(
-          chatId: chat.chatId,
-          chatTitle: chat.title,
-        );
-      },
-    );
-
-    if (isWide) {
-      return Scaffold(
-        body: Row(
-          children: [
-            sidebar,
-            Expanded(child: chatArea),
-          ],
         ),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Aurora')),
-      drawer: Drawer(child: sidebar),
-      body: chatArea,
+      ),
+      body: const ChatScreen(
+        chatId: "",  // ChatController handles real id
+        chatTitle: "",
+      ),
     );
   }
 }
