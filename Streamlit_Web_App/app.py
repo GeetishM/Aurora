@@ -212,15 +212,32 @@ out_of_scope
 Rules:
 - bye, goodbye, see you, exit → farewell
 - hi, hello → greeting
+- Non-healthcare topics → out_of_scope
 
 Query:
 {query}
 
 Answer ONLY the category name.
 """
-    return groq_chat(
-        [{"role": "user", "content": prompt}]
-    ).lower()
+
+    response = groq_chat([{"role": "user", "content": prompt}]).strip().lower()
+
+    valid_categories = {
+        "greeting",
+        "farewell",
+        "daily_symptom_support",
+        "holistic_wellness_lifestyle",
+        "hormonal_life_stages",
+        "mental_emotional_resilience",
+        "preventive_care_screening",
+        "safety_support_advocacy",
+        "out_of_scope",
+    }
+
+    if response not in valid_categories:
+        return "out_of_scope"
+
+    return response
 
 # ================= RAG ================= #
 

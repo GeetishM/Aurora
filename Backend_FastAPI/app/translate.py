@@ -1,32 +1,22 @@
-from groq import Groq
-import os
-
 from dotenv import load_dotenv
+from .llm import groq_chat
+
 load_dotenv()
 
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
 LANG_META = {
-    "hi": {"name": "Hindi", "script": "Devanagari"},
-    "bn": {"name": "Bengali", "script": "Bengali"},
-    "mr": {"name": "Marathi", "script": "Devanagari"},
-    "ta": {"name": "Tamil", "script": "Tamil"},
-    "te": {"name": "Telugu", "script": "Telugu"},
-    "gu": {"name": "Gujarati", "script": "Gujarati"},
-    "kn": {"name": "Kannada", "script": "Kannada"},
+    "hi": {"name": "Hindi",     "script": "Devanagari"},
+    "bn": {"name": "Bengali",   "script": "Bengali"},
+    "mr": {"name": "Marathi",   "script": "Devanagari"},
+    "ta": {"name": "Tamil",     "script": "Tamil"},
+    "te": {"name": "Telugu",    "script": "Telugu"},
+    "gu": {"name": "Gujarati",  "script": "Gujarati"},
+    "kn": {"name": "Kannada",   "script": "Kannada"},
     "ml": {"name": "Malayalam", "script": "Malayalam"},
-    "pa": {"name": "Punjabi", "script": "Gurmukhi"},
-    "ur": {"name": "Urdu", "script": "Arabic"},
-    "or": {"name": "Odia", "script": "Odia"},
+    "pa": {"name": "Punjabi",   "script": "Gurmukhi"},
+    "ur": {"name": "Urdu",      "script": "Arabic"},
+    "or": {"name": "Odia",      "script": "Odia"},
 }
 
-def groq_chat(prompt: str) -> str:
-    res = groq_client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.0
-    )
-    return res.choices[0].message.content.strip()
 
 def translate_to_english(text: str, src_lang: str) -> str:
     if src_lang == "en":
@@ -37,7 +27,8 @@ def translate_to_english(text: str, src_lang: str) -> str:
     else:
         prompt = "Translate to clear English. Only output translation.\n\n" + text
 
-    return groq_chat(prompt)
+    return groq_chat([{"role": "user", "content": prompt}], temperature=0.0)
+
 
 def translate_from_english(text: str, tgt_lang: str) -> str:
     if tgt_lang == "en":
@@ -54,4 +45,4 @@ def translate_from_english(text: str, tgt_lang: str) -> str:
     else:
         prompt = "Translate to target language. Only output translation.\n\n" + text
 
-    return groq_chat(prompt)
+    return groq_chat([{"role": "user", "content": prompt}], temperature=0.0)
