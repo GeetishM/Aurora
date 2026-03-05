@@ -104,7 +104,7 @@ OUT_OF_SCOPE = [
     "If you have any questions about your health big or small please feel free to share. I'm here for you. 🌸",
     "I'm a little limited outside of women's health topics, but I never want you to feel like you have nowhere to turn. "
     "Is there a health question or concern I can help you with instead? 💙",
-    "That one's a bit beyond what I'm designed for — I'd hate to give you an unhelpful answer! "
+    "That one's a bit beyond what I'm designed for I'd hate to give you an unhelpful answer! "
     "But if there's anything women's health-related on your mind, I'm genuinely here to support you. 🌸",
 ]
 
