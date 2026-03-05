@@ -1,5 +1,10 @@
-Backend_FastAPI/data/Aurora_Datasets/
-Backend_FastAPI/data/qdrant_db/
+qdrant_db/
+Streamlit_Web_App/qdrant_db/
+*.sqlite
+*.db
+*.lock
+
+Aurora_Datasets/
 
 __pycache__/
 */__pycache__/
