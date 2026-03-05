@@ -1,0 +1,20 @@
+# Environment
+.env
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Databases
+*.sqlite
+*.db
+*.lock
+
+# Vector DB
+qdrant_db/
+
+# Datasets
+Aurora_Datasets/
+Streamlit_Web_App/Aurora_Datasets/
