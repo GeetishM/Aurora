@@ -5,3 +5,5 @@ Streamlit_Web_App/qdrant_db/
 *.sqlite
 *.db
 *.lock
+
+Streamlit_Web_App/Aurora_Datasets/

@@ -17,7 +17,7 @@ class ChatView extends StatefulWidget {
 class _ChatViewState extends State<ChatView> {
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
-  bool _inputHasFocus = false;
+  final bool _inputHasFocus = false;
 
   @override
   void dispose() {

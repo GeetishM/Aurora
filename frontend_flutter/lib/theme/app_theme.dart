@@ -41,11 +41,9 @@ class AppTheme {
       scaffoldBackgroundColor: AuroraColors.background,
 
       colorScheme: const ColorScheme.dark(
-        background: AuroraColors.background,
         surface:    AuroraColors.surface,
         primary:    AuroraColors.teal,
         secondary:  AuroraColors.purple,
-        onBackground: AuroraColors.textPrimary,
         onSurface:    AuroraColors.textPrimary,
         onPrimary:    Color(0xFF070B14),
       ),
