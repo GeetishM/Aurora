@@ -6,4 +6,4 @@ Streamlit_Web_App/qdrant_db/
 *.db
 *.lock
 
-Streamlit_Web_App/Aurora_Datasets/
+Aurora_Datasets/
