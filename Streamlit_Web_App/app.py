@@ -3,7 +3,7 @@ import random
 import streamlit as st
 from pathlib import Path
 from dotenv import load_dotenv
-from groq import Groq
+from groq import Groq, RateLimitError, APIStatusError
 
 from qdrant_client import QdrantClient
 from langchain_qdrant import QdrantVectorStore
@@ -72,10 +72,10 @@ LANG_META = {
 
 FIRST_GREETINGS = [
     "Hi there! I'm Aurora 🌸 I'm here to support you with any women's health questions you have. What's on your mind today?",
-    "Hello! Welcome — I'm Aurora, your women's health companion. Feel free to ask me anything, I'm here to help. 💙",
+    "Hello! Welcome I'm Aurora, your women's health companion. Feel free to ask me anything, I'm here to help. 💙",
     "Hi! I'm so glad you're here. I'm Aurora, and I'm here to help you navigate any health questions or concerns. What would you like to talk about?",
     "Hello and welcome! I'm Aurora 🌸 Think of me as a knowledgeable friend who's always here to talk through your health questions. How can I support you today?",
-    "Hi there! I'm Aurora — a women's health assistant here to provide a safe, supportive space for your questions. What can I help you with?",
+    "Hi there! I'm Aurora a women's health assistant here to provide a safe, supportive space for your questions. What can I help you with?",
 ]
 
 RETURN_GREETINGS = [
@@ -87,7 +87,7 @@ RETURN_GREETINGS = [
 ]
 
 FAREWELLS = [
-    "Take care of yourself — you deserve it. 🌸 I'll be right here whenever you need me.",
+    "Take care of yourself you deserve it. 🌸 I'll be right here whenever you need me.",
     "Goodbye for now! Remember, your health matters and so do you. Come back anytime. 💙",
     "Take care! It was lovely chatting with you. Don't hesitate to reach out whenever you need support. 🌸",
     "Wishing you good health and peace of mind. See you next time! 😊",
@@ -97,20 +97,78 @@ FAREWELLS = [
 
 OUT_OF_SCOPE = [
     "That's a little outside the area I'm built to support, but I genuinely want to help you. "
-    "If there's anything on your mind related to your health and wellbeing as a woman, please do ask — I'm all ears. 🌸",
-
+    "If there's anything on your mind related to your health and wellbeing as a woman, please do ask I'm all ears. 🌸",
     "I'm best at supporting questions around women's health and wellness, so I may not be the right fit for that one. "
     "But if something health-related is weighing on you, I'm right here and happy to help. 💙",
-
     "That's not quite in my area of expertise, but your wellbeing is what matters most to me. "
-    "If you have any questions about your health — big or small — please feel free to share. I'm here for you. 🌸",
-
+    "If you have any questions about your health big or small please feel free to share. I'm here for you. 🌸",
     "I'm a little limited outside of women's health topics, but I never want you to feel like you have nowhere to turn. "
     "Is there a health question or concern I can help you with instead? 💙",
-
     "That one's a bit beyond what I'm designed for — I'd hate to give you an unhelpful answer! "
     "But if there's anything women's health-related on your mind, I'm genuinely here to support you. 🌸",
 ]
+
+# ================= RATE LIMIT HANDLING ================= #
+#
+# Groq free tier limits:
+#   • 30 requests / minute
+#   • 14,400 requests / day  (resets midnight UTC)
+#   • 6,000 tokens / minute
+#
+# When any of these are hit, Groq raises groq.RateLimitError.
+# We catch it in every call site and show:
+#   1. st.toast()  — a small pop-up notification (top-right corner, auto-dismisses)
+#   2. st.warning() — a persistent yellow banner inside the chat so the user
+#                     knows their message wasn't lost and can retry.
+#
+# The error message from Groq contains a "retry after X seconds" hint.
+# We extract and display it so the user knows exactly how long to wait.
+
+def _parse_retry_seconds(error: RateLimitError) -> str:
+    """Try to extract the retry-after hint from the Groq error message."""
+    try:
+        msg = str(error)
+        # Groq often embeds: "Please try again in Xs" or "retry after Xs"
+        import re
+        match = re.search(r"(?:try again in|retry after)\s+([\d.]+\s*\w+)", msg, re.I)
+        if match:
+            return match.group(1)
+    except Exception:
+        pass
+    return "a moment"
+
+
+def _show_rate_limit_popup(error: RateLimitError, context: str = "") -> None:
+    """Display a toast popup + inline warning when the Groq rate limit is hit."""
+    retry_hint = _parse_retry_seconds(error)
+
+    # Toast — small floating notification, auto-dismisses after ~4 s
+    st.toast(
+        f"⏳ Groq rate limit reached. Please wait {retry_hint} and try again.",
+        icon="⚠️",
+    )
+
+    # Persistent inline banner so the user sees it even after toast disappears
+    label = f" (during {context})" if context else ""
+    st.warning(
+        f"**Rate limit reached{label}** — Groq's free tier allows 30 requests/minute "
+        f"and 14,400 requests/day.\n\n"
+        f"⏳ Please wait **{retry_hint}** then send your message again. "
+        f"Your question has not been lost.",
+        icon="⚠️",
+    )
+
+
+def _show_api_error_popup(error: Exception, context: str = "") -> None:
+    """Generic API error popup for non-rate-limit failures."""
+    label = f" (during {context})" if context else ""
+    st.toast(f"❌ API error{label}. Please try again.", icon="❌")
+    st.error(
+        f"**Something went wrong{label}.** Aurora couldn't reach the AI service right now.\n\n"
+        f"Please try sending your message again in a few seconds.",
+        icon="❌",
+    )
+
 
 # ================= EMBEDDINGS ================= #
 
@@ -135,7 +193,6 @@ def load_vectorstore():
 
 vectorstore = load_vectorstore()
 
-# UPGRADE 1: MMR retrieval + score threshold
 retriever = vectorstore.as_retriever(
     search_type="mmr",
     search_kwargs={"k": 4, "fetch_k": 8, "score_threshold": 0.30},
@@ -143,54 +200,81 @@ retriever = vectorstore.as_retriever(
 
 # ================= GROQ CORE ================= #
 
-def groq_chat(messages, temperature=0.0) -> str:
-    response = groq_client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=messages,
-        temperature=temperature
-    )
-    return response.choices[0].message.content.strip()
+def groq_chat(messages, temperature=0.0) -> str | None:
+    """
+    Returns the response string, or None if a rate limit was hit.
+    Callers check for None and skip further processing.
+    """
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=messages,
+            temperature=temperature,
+        )
+        return response.choices[0].message.content.strip()
+    except RateLimitError as e:
+        _show_rate_limit_popup(e, context="chat")
+        return None
+    except APIStatusError as e:
+        _show_api_error_popup(e, context="chat")
+        return None
 
-# UPGRADE 2: Streaming response
+
 def groq_stream(messages, temperature=0.3):
-    stream = groq_client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=messages,
-        temperature=temperature,
-        stream=True,
-    )
-    for chunk in stream:
-        delta = chunk.choices[0].delta.content
-        if delta:
-            yield delta
+    """
+    Yields text tokens. On rate limit, yields a formatted warning string
+    instead so st.write_stream() displays it gracefully inside the bubble.
+    """
+    try:
+        stream = groq_client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=messages,
+            temperature=temperature,
+            stream=True,
+        )
+        for chunk in stream:
+            delta = chunk.choices[0].delta.content
+            if delta:
+                yield delta
+    except RateLimitError as e:
+        retry_hint = _parse_retry_seconds(e)
+        # Show popup
+        _show_rate_limit_popup(e, context="response generation")
+        # Yield a graceful in-bubble message instead of crashing
+        yield (
+            f"\n\n⚠️ *I've hit my request limit right now — please wait "
+            f"{retry_hint} and ask again. Your question hasn't been lost!* 🌸"
+        )
+    except APIStatusError as e:
+        _show_api_error_popup(e, context="response generation")
+        yield "\n\n❌ *Something went wrong. Please try sending your message again.* 💙"
+
 
 # ================= TRANSLATION ================= #
 
-# UPGRADE 3: Translation cache
 def _tx_cache_key(text: str, lang: str) -> str:
     return f"{lang}:{hash(text)}"
 
-def translate_to_english(text: str, src_lang: str) -> str:
+def translate_to_english(text: str, src_lang: str) -> str | None:
     if src_lang == "en":
         return text
     key = _tx_cache_key(text, f"{src_lang}>en")
     if key in st.session_state.get("tx_cache", {}):
         return st.session_state["tx_cache"][key]
 
-    if src_lang == "hinglish":
-        instruction = (
-            "Translate the following Hinglish (Hindi written using English letters) "
-            "into clear, natural English. Do not explain. Output ONLY the translation."
-        )
-    else:
-        instruction = (
-            "Translate the following text into clear, natural English. "
-            "Do not explain. Output ONLY the translation."
-        )
+    instruction = (
+        "Translate the following Hinglish (Hindi written using English letters) "
+        "into clear, natural English. Do not explain. Output ONLY the translation."
+        if src_lang == "hinglish"
+        else "Translate the following text into clear, natural English. "
+             "Do not explain. Output ONLY the translation."
+    )
     result = groq_chat([
         {"role": "system", "content": "You are a strict translation engine."},
-        {"role": "user",   "content": f"{instruction}\n\n{text}"}
+        {"role": "user",   "content": f"{instruction}\n\n{text}"},
     ])
+    if result is None:
+        return None   # rate limit hit during translation
     st.session_state.setdefault("tx_cache", {})[key] = result
     return result
 
@@ -222,10 +306,11 @@ def translate_from_english(text: str, tgt_lang: str) -> str:
         )
     result = groq_chat([
         {"role": "system", "content": "You are a professional translation engine."},
-        {"role": "user",   "content": f"{instruction}\n\n{text}"}
+        {"role": "user",   "content": f"{instruction}\n\n{text}"},
     ])
-    st.session_state.setdefault("tx_cache", {})[key] = result
-    return result
+    # If rate-limited during translation, return the original English as fallback
+    return result if result is not None else text
+
 
 # ================= ROUTER ================= #
 
@@ -253,7 +338,10 @@ Query:
 
 Answer ONLY the category name.
 """
-    response = groq_chat([{"role": "user", "content": prompt}]).strip().lower()
+    response = groq_chat([{"role": "user", "content": prompt}])
+    if response is None:
+        return "rate_limited"   # special sentinel — handled in input section
+    response = response.strip().lower()
     valid_categories = {
         "greeting", "farewell", "daily_symptom_support",
         "holistic_wellness_lifestyle", "hormonal_life_stages",
@@ -262,13 +350,12 @@ Answer ONLY the category name.
     }
     return response if response in valid_categories else "out_of_scope"
 
+
 # ================= QUERY REWRITING ================= #
 
-# UPGRADE 4: Query rewriting
 def rewrite_query(query: str, history: list) -> str:
     if len(history) <= 1:
         return query
-
     recent = "\n".join(
         f"{m['role']}: {m['content']}" for m in history[-4:] if m["role"] != "system"
     )
@@ -283,12 +370,14 @@ Conversation:
 
 Latest message: {query}
 """
-    rewritten = groq_chat([{"role": "user", "content": prompt}]).strip()
-    return rewritten if len(rewritten) > 5 else query
+    rewritten = groq_chat([{"role": "user", "content": prompt}])
+    if rewritten is None:
+        return query   # rate limit hit — fall back to original query
+    return rewritten.strip() if len(rewritten.strip()) > 5 else query
+
 
 # ================= RAG ================= #
 
-# UPGRADE 5: Source citations
 def get_rag_answer(query: str, history: list) -> tuple[str, list[dict]]:
     search_query = rewrite_query(query, history)
     docs = retriever.invoke(search_query)
@@ -311,9 +400,9 @@ def get_rag_answer(query: str, history: list) -> tuple[str, list[dict]]:
         src  = meta.get("source") or meta.get("source_type", "")
         cat  = meta.get("category", "")
         sub  = meta.get("subcategory", "")
-        key  = f"{src}:{cat}:{sub}"
-        if key not in seen:
-            seen.add(key)
+        k    = f"{src}:{cat}:{sub}"
+        if k not in seen:
+            seen.add(k)
             sources.append({"source": src, "category": cat, "subcategory": sub})
 
     prompt = ChatPromptTemplate.from_template("""
@@ -345,9 +434,8 @@ Rules:
             for m in history[-6:]
             if m["role"] != "system"
         ),
-        question=query
+        question=query,
     )
-
     return formatted, sources
 
 
@@ -358,17 +446,17 @@ def build_rag_messages(formatted_prompt: str) -> list[dict]:
             "You speak like a caring, informed friend — clear, empathetic, and never clinical or cold. "
             "Always acknowledge the human behind the question."
         )},
-        {"role": "user", "content": formatted_prompt}
+        {"role": "user", "content": formatted_prompt},
     ]
+
 
 # ================= CONVERSATION SUMMARISATION ================= #
 
-# UPGRADE 6: History summarisation
-MAX_HISTORY = 14
+MAX_HISTORY  = 14
 SUMMARY_KEEP = 4
 
 def maybe_summarise_history() -> None:
-    history = st.session_state.history_en
+    history    = st.session_state.history_en
     non_system = [m for m in history if m["role"] != "system"]
     if len(non_system) <= MAX_HISTORY:
         return
@@ -383,10 +471,13 @@ def maybe_summarise_history() -> None:
         "Be concise.\n\n" + convo_text
     )
     summary = groq_chat([{"role": "user", "content": summary_prompt}])
+    if summary is None:
+        return   # rate limited — skip summarisation this turn, try again next time
 
     system_msgs = [m for m in history if m["role"] == "system"]
     summary_msg = {"role": "assistant", "content": f"[Conversation summary]\n{summary}"}
     st.session_state.history_en = system_msgs + [summary_msg] + to_keep
+
 
 # ================= UI ================= #
 
@@ -410,7 +501,6 @@ if "chat_en" not in st.session_state:
     st.session_state.chat_en = [
         {"role": "assistant", "content": random.choice(FIRST_GREETINGS)}
     ]
-
 if "history_en" not in st.session_state:
     st.session_state.history_en = [
         {"role": "system", "content": (
@@ -418,15 +508,9 @@ if "history_en" not in st.session_state:
             "You speak like a caring, informed friend — clear, empathetic, and never clinical or cold."
         )}
     ]
-
-if "has_interacted" not in st.session_state:
-    st.session_state.has_interacted = False
-
-if "tx_cache" not in st.session_state:
-    st.session_state.tx_cache = {}
-
-if "sources_map" not in st.session_state:
-    st.session_state.sources_map = {}
+if "has_interacted"  not in st.session_state: st.session_state.has_interacted  = False
+if "tx_cache"        not in st.session_state: st.session_state.tx_cache        = {}
+if "sources_map"     not in st.session_state: st.session_state.sources_map     = {}
 
 # ================= CHAT RENDER ================= #
 
@@ -435,7 +519,6 @@ for i, msg in enumerate(st.session_state.chat_en):
     with st.chat_message(msg["role"]):
         st.markdown(translated)
 
-        # Show sources if this assistant message has them
         sources = st.session_state.sources_map.get(i, [])
         if sources and msg["role"] == "assistant":
             with st.expander("📚 Sources used", expanded=False):
@@ -455,7 +538,12 @@ for i, msg in enumerate(st.session_state.chat_en):
 user_input = st.chat_input("Ask about women's health...")
 
 if user_input:
+
+    # ── Step 1: translate input (may hit rate limit) ───────────────────────
     user_input_en = translate_to_english(user_input, lang_code)
+    if user_input_en is None:
+        # Rate limit hit during translation — popups already shown, stop here
+        st.stop()
 
     with st.chat_message("user"):
         st.markdown(user_input)
@@ -463,8 +551,14 @@ if user_input:
     st.session_state.chat_en.append({"role": "user", "content": user_input_en})
     st.session_state.history_en.append({"role": "user", "content": user_input_en})
 
+    # ── Step 2: route (may hit rate limit) ────────────────────────────────
     category = route_query(user_input_en)
 
+    if category == "rate_limited":
+        # Popups already shown inside route_query → groq_chat → _show_rate_limit_popup
+        st.stop()
+
+    # ── Step 3: generate response ─────────────────────────────────────────
     if category == "farewell":
         answer_en = random.choice(FAREWELLS)
         with st.chat_message("assistant"):
@@ -497,6 +591,7 @@ if user_input:
 
         with st.chat_message("assistant"):
             if lang_code == "en":
+                # groq_stream handles rate limit internally — yields warning text if hit
                 response_text = st.write_stream(groq_stream(messages))
             else:
                 with st.spinner("Thinking…"):
