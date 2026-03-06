@@ -195,7 +195,7 @@ vectorstore = load_vectorstore()
 
 retriever = vectorstore.as_retriever(
     search_type="mmr",
-    search_kwargs={"k": 4, "fetch_k": 8, "score_threshold": 0.30},
+    search_kwargs={"k": 6, "fetch_k": 12, "lambda_mult": 0.7},
 )
 
 # ================= GROQ CORE ================= #

@@ -17,7 +17,7 @@ class ChatView extends StatefulWidget {
 class _ChatViewState extends State<ChatView> {
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
-  final bool _inputHasFocus = false;
+  bool _inputHasFocus = false;
 
   @override
   void dispose() {
@@ -60,7 +60,9 @@ class _ChatViewState extends State<ChatView> {
           children: [
             // ── Message list ────────────────────────────────────────
             Expanded(
-              child: messages.isEmpty
+              child: Stack(
+                children: [
+                  messages.isEmpty
                   ? const _EmptyChatHint()
                   : ListView.builder(
                       controller: _scrollController,
@@ -70,13 +72,59 @@ class _ChatViewState extends State<ChatView> {
                       itemBuilder: (context, index) {
                         final msg = messages[index];
                         final isLast = index == messages.length - 1;
+                        final isLastAssistant = isLast && !msg.isUser;
                         return _MessageBubble(
                           message: msg,
-                          isStreaming:
-                              isLast && !msg.isUser && controller.isStreaming,
+                          // Show typing dots when:
+                          // - English: streaming chunks (text is being built)
+                          // - Non-English: streaming OR translating (text is empty until final)
+                          isStreaming: isLastAssistant &&
+                              (controller.isStreaming || controller.isTranslating),
                         );
                       },
                     ),
+                  // ── Translating overlay ──────────────────────────
+                  if (controller.isTranslating && messages.isNotEmpty)
+                    Positioned.fill(
+                      child: Container(
+                        color: AuroraColors.background.withOpacity(0.6),
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: AuroraColors.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                  color: AuroraColors.teal.withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AuroraColors.teal,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'Translating messages...',
+                                  style: TextStyle(
+                                    color: AuroraColors.textSecondary,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
 
             // ── Input bar ────────────────────────────────────────────
@@ -203,6 +251,9 @@ class _AssistantBubble extends StatelessWidget {
     required this.text,
     required this.isStreaming,
   });
+
+  // Non-English: text is empty while streaming because chunks are suppressed.
+  // The typing indicator shows until onFinal fires with the translated text.
 
   @override
   Widget build(BuildContext context) {

@@ -25,5 +25,5 @@ def load_retriever():
     # search_type="similarity_score_threshold", so we don't pass it here.
     return load_vectorstore().as_retriever(
         search_type="mmr",
-        search_kwargs={"k": 4, "fetch_k": 8, "lambda_mult": 0.7},
+        search_kwargs={"k": 6, "fetch_k": 12, "lambda_mult": 0.7},
     )

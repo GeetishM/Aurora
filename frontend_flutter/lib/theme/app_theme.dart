@@ -3,16 +3,16 @@ import 'package:flutter/services.dart';
 
 class AuroraColors {
   // ── Backgrounds ──────────────────────────────────────
-  static const Color background     = Color(0xFF070B14); // deep space
-  static const Color surface        = Color(0xFF0D1526); // card/drawer
-  static const Color surfaceVariant = Color(0xFF131E32); // input / hover
+  static const Color background     = Color(0xFF070B14);
+  static const Color surface        = Color(0xFF0D1526);
+  static const Color surfaceVariant = Color(0xFF131E32);
   static const Color divider        = Color(0xFF1C2A40);
 
   // ── Aurora Accents ────────────────────────────────────
-  static const Color teal           = Color(0xFF00E5C4); // primary aurora
-  static const Color purple         = Color(0xFF7C4DFF); // aurora violet
-  static const Color cyan           = Color(0xFF00B4D8); // aurora blue
-  static const Color green          = Color(0xFF00F5A0); // aurora green tip
+  static const Color teal           = Color(0xFF00E5C4);
+  static const Color purple         = Color(0xFF7C4DFF);
+  static const Color cyan           = Color(0xFF00B4D8);
+  static const Color green          = Color(0xFF00F5A0);
 
   // ── Text ─────────────────────────────────────────────
   static const Color textPrimary    = Color(0xFFE4EBF5);
@@ -26,6 +26,7 @@ class AuroraColors {
     end: Alignment.bottomRight,
   );
 
+  // ✅ Fixed: was 'aurораGlow' with a Cyrillic 'о' — now fully Latin
   static const LinearGradient auroraGlow = LinearGradient(
     colors: [Color(0xFF00E5C4), Color(0xFF00B4D8), Color(0xFF7C4DFF)],
     begin: Alignment.centerLeft,
@@ -41,9 +42,11 @@ class AppTheme {
       scaffoldBackgroundColor: AuroraColors.background,
 
       colorScheme: const ColorScheme.dark(
+        background: AuroraColors.background,
         surface:    AuroraColors.surface,
         primary:    AuroraColors.teal,
         secondary:  AuroraColors.purple,
+        onBackground: AuroraColors.textPrimary,
         onSurface:    AuroraColors.textPrimary,
         onPrimary:    Color(0xFF070B14),
       ),

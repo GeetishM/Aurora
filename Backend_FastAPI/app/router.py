@@ -4,14 +4,28 @@ from .llm import groq_chat
 
 logger = logging.getLogger(__name__)
 
-# Hard-block patterns (no LLM needed)
+# ── Hard block — pure arithmetic only ─────────────────────────────────────────
 MATH_PATTERN = re.compile(
     r"\b(\d+\s*[\+\-\*/%]\s*\d+|\d+\s*(plus|minus|times|multiply|divide|mod)\s*\d+)\b",
     re.IGNORECASE,
 )
+
+# ── Hard block — unambiguous code only ────────────────────────────────────────
+# ⚠️  DO NOT add common English words like: for, if, while, return, else,
+#     class, print, import — they all appear in normal health questions.
+#     e.g. "Tips FOR managing pain", "IF you have symptoms", "RETURN to normal"
+#
+# Only block when there is clear, unambiguous programming syntax:
 CODING_PATTERN = re.compile(
-    r"\b(python|java|c\+\+|javascript|typescript|sql|html|css|flutter|dart|"
-    r"function|class|def|return|for|while|if|else|import|print|console)\b|[{}();<>]",
+    r"\b(python|javascript|typescript|html|css|flutter|dart|sql)\b"  # unambiguous language names
+    r"|[{};]"                                                          # code structure symbols { } ;
+    r"|\bdef\s+\w+\s*\("                                              # def function_name(
+    r"|\bimport\s+[a-zA-Z_]"                                          # import something
+    r"|\bconsole\.(log|error|warn)\b"                                 # console.log
+    r"|\bfunction\s+\w+\s*\("                                         # function name(
+    r"|\bclass\s+[A-Z]\w+\s*[{(:]"                                    # class ClassName( or {
+    r"|\bstd::"                                                        # C++ std::
+    r"|\b#include\b",                                                  # C/C++ include
     re.IGNORECASE,
 )
 
@@ -25,8 +39,10 @@ VALID_CATEGORIES = {
 
 
 def is_hard_out_of_scope(query: str) -> bool:
+    # Only block real arithmetic expressions (number OP number)
     if MATH_PATTERN.search(query) and any(op in query for op in ['+', '-', '*', '/', '%']):
         return True
+    # Only block clear programming syntax
     if CODING_PATTERN.search(query):
         return True
     return False
@@ -38,9 +54,9 @@ def route_query(query: str) -> str:
     Returns 'rate_limited' if Groq quota is hit so the caller can respond gracefully.
     """
     prompt = f"""
-Classify this women's healthcare query into ONE category.
+You are a routing assistant for a women's healthcare chatbot.
 
-Categories:
+Classify the query into ONE of these categories:
 greeting
 farewell
 daily_symptom_support
@@ -52,13 +68,16 @@ safety_support_advocacy
 out_of_scope
 
 Rules:
-- bye, goodbye, see you, exit → farewell
+- bye, goodbye, see you → farewell
 - hi, hello, hey → greeting
-- Anything related to women's body, periods, hormones, mental health, lifestyle, wellness, safety → use the most relevant health category
-- Mathematics, programming, coding, unrelated general knowledge → out_of_scope
+- ANYTHING related to: women's body, periods, menstruation, cramps, pain,
+  hormones, pregnancy, fertility, menopause, mental health, emotions, stress,
+  anxiety, lifestyle, nutrition, exercise, sleep, wellness, safety, abuse,
+  healthcare, symptoms, or any medical concern → use the most relevant health category
+- ONLY use out_of_scope for: pure mathematics, programming/coding questions,
+  or completely unrelated topics like sports scores or geography
 
-Query:
-{query}
+Query: {query}
 
 Return ONLY the category name. Nothing else.
 """
