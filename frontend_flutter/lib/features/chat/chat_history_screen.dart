@@ -5,6 +5,7 @@ import '../../core/storage/boxes.dart';
 import '../../models/chat_history.dart';
 import '../../state/chat_controller.dart';
 import '../../theme/app_theme.dart';
+import '../../state/theme_controller.dart';
 import 'chat_screen.dart';
 
 class ChatHistoryScreen extends StatelessWidget {
@@ -62,15 +63,7 @@ class _AuroraAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           actions: [
             _LanguagePicker(),
-            IconButton(
-              icon: ShaderMask(
-                shaderCallback: (b) => AuroraColors.userBubble.createShader(b),
-                child: const Icon(Icons.edit_square,
-                    color: Colors.white, size: 22),
-              ),
-              tooltip: 'New chat',
-              onPressed: () async => await controller.createNewChat(),
-            ),
+            _ThemeToggleButton(),
             const SizedBox(width: 4),
           ],
           bottom: PreferredSize(
@@ -79,6 +72,46 @@ class _AuroraAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// ── THEME TOGGLE ─────────────────────────────────────────────────────────────
+
+class _ThemeToggleButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final isDark = context.watch<ThemeController>().isDark;
+
+    return IconButton(
+      tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
+      onPressed: () => context.read<ThemeController>().toggle(),
+      icon: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (child, anim) => RotationTransition(
+          turns: anim,
+          child: FadeTransition(opacity: anim, child: child),
+        ),
+        child: isDark
+            // Dark mode: show sun (switch to light)
+            ? ShaderMask(
+                key: const ValueKey('sun'),
+                shaderCallback: (b) => const LinearGradient(
+                  colors: [AuroraColors.geckoGreen, AuroraColors.easterGreen],
+                ).createShader(b),
+                child: const Icon(Icons.wb_sunny_rounded,
+                    color: Colors.white, size: 22),
+              )
+            // Light mode: show moon (switch to dark)
+            : ShaderMask(
+                key: const ValueKey('moon'),
+                shaderCallback: (b) => const LinearGradient(
+                  colors: [AuroraColors.cosmicPurple, AuroraColors.techNavy],
+                ).createShader(b),
+                child: const Icon(Icons.dark_mode_rounded,
+                    color: Colors.white, size: 22),
+              ),
+      ),
     );
   }
 }
@@ -207,15 +240,17 @@ class _AuroraSidebar extends StatelessWidget {
             ),
 
             const SizedBox(height: 8),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-              child: Text(
-                'RECENT CHATS',
-                style: TextStyle(
-                  color: AuroraColors.textHint,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.4,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              child: context.select<ChatController, Widget>(
+                (c) => Text(
+                  c.uiLabel('recent_chats').toUpperCase(),
+                  style: const TextStyle(
+                    color: AuroraColors.textHint,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.4,
+                  ),
                 ),
               ),
             ),
@@ -228,9 +263,13 @@ class _AuroraSidebar extends StatelessWidget {
                     ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
                   if (chats.isEmpty) {
-                    return const Center(
-                      child: Text('No chats yet',
-                          style: TextStyle(color: AuroraColors.textHint)),
+                    return Center(
+                      child: context.select<ChatController, Widget>(
+                        (c) => Text(
+                          c.uiLabel('no_chats'),
+                          style: const TextStyle(color: AuroraColors.textHint),
+                        ),
+                      ),
                     );
                   }
 
@@ -267,17 +306,21 @@ class _NewChatButton extends StatelessWidget {
             await context.read<ChatController>().createNewChat();
             if (context.mounted) Navigator.pop(context);
           },
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                Icon(Icons.add_rounded, color: Colors.white, size: 20),
-                SizedBox(width: 10),
-                Text('New Chat',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600)),
+                const Icon(Icons.add_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Text(
+                  context.select<ChatController, String>(
+                    (c) => c.uiLabel('new_chat'),
+                  ),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600),
+                ),
               ],
             ),
           ),
@@ -294,78 +337,21 @@ class _ChatTile extends StatelessWidget {
   const _ChatTile({required this.chat});
 
   // ── Rename dialog ─────────────────────────────────────────────────────────
+  // Uses a StatefulWidget internally so TextEditingController lifecycle
+  // is managed by Flutter — no manual dispose() needed, no crash on cancel.
   Future<void> _showRenameDialog(BuildContext context) async {
-    final textController = TextEditingController(text: chat.title);
-    // Capture controller via read — safe for async use
     final controller = context.read<ChatController>();
-
     await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AuroraColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AuroraColors.divider),
-        ),
-        title: const Text(
-          'Rename Chat',
-          style: TextStyle(
-              color: AuroraColors.textPrimary, fontWeight: FontWeight.w600),
-        ),
-        content: TextField(
-          controller: textController,
-          autofocus: true,
-          style: const TextStyle(color: AuroraColors.textPrimary),
-          cursorColor: AuroraColors.teal,
-          decoration: InputDecoration(
-            hintText: 'Enter chat name',
-            hintStyle: const TextStyle(color: AuroraColors.textHint),
-            filled: true,
-            fillColor: AuroraColors.surfaceVariant,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AuroraColors.divider),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AuroraColors.teal, width: 1.2),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AuroraColors.divider),
-            ),
-          ),
-          onSubmitted: (_) async {
-            await controller.renameChat(chat.chatId, textController.text);
-            if (ctx.mounted) Navigator.pop(ctx);
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
-                style: TextStyle(color: AuroraColors.textSecondary)),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: AuroraColors.userBubble,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: TextButton(
-              onPressed: () async {
-                await controller.renameChat(chat.chatId, textController.text);
-                if (ctx.mounted) Navigator.pop(ctx);
-              },
-              child: const Text('Rename',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600)),
-            ),
-          ),
-        ],
+      builder: (ctx) => _RenameDialog(
+        initialTitle: chat.title,
+        onRename: (newTitle) async {
+          await controller.renameChat(chat.chatId, newTitle);
+          if (ctx.mounted) Navigator.pop(ctx);
+        },
+        onCancel: () => Navigator.pop(ctx),
       ),
     );
-
-    textController.dispose();
   }
 
   // ── Delete confirmation dialog ────────────────────────────────────────────
@@ -419,9 +405,12 @@ class _ChatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // context.watch for reactive UI (isActive highlight)
-    final isActive = context.select<ChatController, bool>(
-      (c) => c.currentChatId == chat.chatId,
+    // context.select — only rebuilds on isActive or title translation changes
+    final (isActive, displayTitle) = context.select<ChatController, (bool, String)>(
+      (c) => (
+        c.currentChatId == chat.chatId,
+        c.getTitle(chat.chatId, chat.title), // translated or original
+      ),
     );
 
     return Container(
@@ -444,7 +433,7 @@ class _ChatTile extends StatelessWidget {
           color: isActive ? AuroraColors.teal : AuroraColors.textHint,
         ),
         title: Text(
-          chat.title,
+          displayTitle,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
@@ -455,15 +444,7 @@ class _ChatTile extends StatelessWidget {
             fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
-        subtitle: chat.lastMessage.isNotEmpty
-            ? Text(
-                chat.lastMessage,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    color: AuroraColors.textHint, fontSize: 11),
-              )
-            : null,
+        subtitle: null,
 
         // ── Tap: open chat ─────────────────────────────────────────────
         onTap: () async {
@@ -596,6 +577,117 @@ class _ChatMenuButton extends StatelessWidget {
                   style: TextStyle(
                       color: Colors.red.shade400, fontSize: 13)),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Rename Dialog ────────────────────────────────────────────────────────────
+// StatefulWidget so TextEditingController is owned by the widget tree.
+// Flutter disposes it automatically when the dialog closes — no manual
+// dispose() call needed, no "used after disposed" crash.
+
+class _RenameDialog extends StatefulWidget {
+  final String initialTitle;
+  final Future<void> Function(String) onRename;
+  final VoidCallback onCancel;
+
+  const _RenameDialog({
+    required this.initialTitle,
+    required this.onRename,
+    required this.onCancel,
+  });
+
+  @override
+  State<_RenameDialog> createState() => _RenameDialogState();
+}
+
+class _RenameDialogState extends State<_RenameDialog> {
+  late final TextEditingController _controller;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialTitle);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose(); // ✅ safe — called by Flutter when widget leaves tree
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    await widget.onRename(_controller.text);
+    // No setState after onRename — dialog is already popped
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AuroraColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AuroraColors.divider),
+      ),
+      title: const Text(
+        'Rename Chat',
+        style: TextStyle(
+            color: AuroraColors.textPrimary, fontWeight: FontWeight.w600),
+      ),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        style: const TextStyle(color: AuroraColors.textPrimary),
+        cursorColor: AuroraColors.teal,
+        decoration: InputDecoration(
+          hintText: 'Enter chat name',
+          hintStyle: const TextStyle(color: AuroraColors.textHint),
+          filled: true,
+          fillColor: AuroraColors.surfaceVariant,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AuroraColors.divider),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AuroraColors.teal, width: 1.2),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AuroraColors.divider),
+          ),
+        ),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: widget.onCancel, // ✅ just pops — controller still alive
+          child: const Text('Cancel',
+              style: TextStyle(color: AuroraColors.textSecondary)),
+        ),
+        Container(
+          decoration: BoxDecoration(
+            gradient: AuroraColors.userBubble,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: TextButton(
+            onPressed: _saving ? null : _submit,
+            child: _saving
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Rename',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w600)),
           ),
         ),
       ],

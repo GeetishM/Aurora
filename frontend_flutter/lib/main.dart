@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend_flutter/state/theme_controller.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,13 +11,20 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await HiveService.init();
 
-  // ✅ Load saved language BEFORE app starts — no race condition
-  final prefs       = await SharedPreferences.getInstance();
-  final savedLang   = prefs.getString('aurora_language') ?? 'en';
+  final prefs     = await SharedPreferences.getInstance();
+  final savedLang = prefs.getString('aurora_language') ?? 'en';
+  final themeMode = await ThemeController.load();
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ChatController(initialLanguage: savedLang),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => ThemeController(initial: themeMode),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ChatController(initialLanguage: savedLang),
+        ),
+      ],
       child: const AuroraApp(),
     ),
   );
