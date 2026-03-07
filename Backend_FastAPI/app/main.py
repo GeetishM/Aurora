@@ -18,11 +18,15 @@ ALLOWED_ORIGINS = [
 
 app = FastAPI(title="Aurora Backend")
 
+# ✅ Import AFTER app is created — fixes NameError
+from app.routers.transcribe import router as transcribe_router
+app.include_router(transcribe_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
-    allow_methods=["GET", "POST"],   # ✅ POST needed for /translate
+    allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
 
@@ -35,12 +39,10 @@ async def chat(ws: WebSocket):
 
 
 # ── Translate endpoint ────────────────────────────────────────────────────────
-# Called by Flutter when the user switches language — re-translates
-# existing chat messages without going through the full RAG pipeline.
 
 class TranslateRequest(BaseModel):
     text:     str
-    language: str   # target language code e.g. "hi", "fr"
+    language: str
 
 class TranslateResponse(BaseModel):
     translated: str
