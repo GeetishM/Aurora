@@ -1,73 +1,114 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AURORA COLORS
+// ─────────────────────────────────────────────────────────────────────────────
+
 class AuroraColors {
-  // ── Core Backgrounds (Dark) ───────────────────────────────────────────────
-  static const Color background     = Color(0xFF070B14);
+  // ── Dark theme surfaces ───────────────────────────────────────────────────
+  static const Color background     = Color(0xFF070B14); // original deep navy
   static const Color surface        = Color(0xFF0D1526);
   static const Color surfaceVariant = Color(0xFF131E32);
   static const Color divider        = Color(0xFF1C2A40);
 
-  // ── Core Backgrounds (Light) ──────────────────────────────────────────────
-  static const Color backgroundLight     = Color(0xFFF0F4FF);
+  // ── Light theme surfaces ──────────────────────────────────────────────────
+  // Soft white with a faint mint tint — like early morning aurora
+  static const Color backgroundLight     = Color(0xFFF4FFFE); // near-white, hint of teal
   static const Color surfaceLight        = Color(0xFFFFFFFF);
-  static const Color surfaceVariantLight = Color(0xFFE8EEFF);
-  static const Color dividerLight        = Color(0xFFD0D8F0);
+  static const Color surfaceVariantLight = Color(0xFFE6FBF6); // soft mint card
+  static const Color dividerLight        = Color(0xFFB8EBE0); // light teal divider
 
-  // ── Brand Palette ─────────────────────────────────────────────────────────
-  /// Gecko Green — vivid electric lime
-  static const Color geckoGreen   = Color(0xFF8BFF3A);
+  // ── Sidebar (Light) — slightly deeper mint so it contrasts the main bg ───
+  static const Color sidebarLight        = Color(0xFFEAFAF6);
 
-  /// Easter Green — soft pastel mint-green
-  static const Color easterGreen  = Color(0xFF7FFFD4); // aquamarine-style
+  // ── Accents (shared) ──────────────────────────────────────────────────────
+  static const Color teal         = Color(0xFF00E5C4); // original aurora teal
+  static const Color tealDark     = Color(0xFF00B89E); // deeper teal for light mode
+  static const Color purple       = Color(0xFF7C4DFF); // original aurora purple
+  static const Color purpleDeep   = Color(0xFF5B30D6); // richer purple for light mode
+  static const Color cyan         = Color(0xFF00B4D8);
+  static const Color green        = Color(0xFF00F5A0);
 
-  /// Cosmic Purple — deep vibrant violet
+  // ── Brand palette ─────────────────────────────────────────────────────────
+  static const Color geckoGreen   = Color(0xFF8BFF3A); // kept for buttons/gradients
+  static const Color easterGreen  = Color(0xFF7FFFD4);
   static const Color cosmicPurple = Color(0xFF7C3AED);
-
-  /// Tech Navy Blue — rich dark navy with a tech feel
   static const Color techNavy     = Color(0xFF0F2B5B);
 
-  // ── Legacy accents (kept for existing widgets) ────────────────────────────
-  static const Color teal    = Color(0xFF00E5C4);
-  static const Color purple  = Color(0xFF7C4DFF);
-  static const Color cyan    = Color(0xFF00B4D8);
-  static const Color green   = Color(0xFF00F5A0);
-
-  // ── Text (Dark theme) ─────────────────────────────────────────────────────
+  // ── Dark text ─────────────────────────────────────────────────────────────
   static const Color textPrimary   = Color(0xFFE4EBF5);
   static const Color textSecondary = Color(0xFF8A9BB5);
   static const Color textHint      = Color(0xFF4A5C76);
 
-  // ── Text (Light theme) ────────────────────────────────────────────────────
-  static const Color textPrimaryLight   = Color(0xFF0A1628);
-  static const Color textSecondaryLight = Color(0xFF3D5275);
-  static const Color textHintLight      = Color(0xFF8A9BB5);
+  // ── Light text ────────────────────────────────────────────────────────────
+  static const Color textPrimaryLight   = Color(0xFF0A1F1B); // deep teal-black
+  static const Color textSecondaryLight = Color(0xFF3A6B60); // muted teal-grey
+  static const Color textHintLight      = Color(0xFF7AADA3); // soft teal hint
 
   // ── Gradients ─────────────────────────────────────────────────────────────
-  /// User bubble gradient — Gecko Green → Cosmic Purple
+  /// User bubble — teal → purple (works on both themes)
   static const LinearGradient userBubble = LinearGradient(
-    colors: [geckoGreen, cosmicPurple],
+    colors: [Color(0xFF00C9B1), Color(0xFF7C4DFF)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  /// Aurora glow — Easter Green → teal → Cosmic Purple
-  static const LinearGradient auroraGlow = LinearGradient(
-    colors: [easterGreen, teal, cosmicPurple],
+  /// Aurora glow — teal → cyan → purple (original, for dark theme)
+  static const LinearGradient auroraGlowDark = LinearGradient(
+    colors: [Color(0xFF00E5C4), Color(0xFF00B4D8), Color(0xFF7C4DFF)],
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
   );
 
-  /// Tech gradient — techNavy → Cosmic Purple (used in light theme accents)
-  static const LinearGradient techGradient = LinearGradient(
-    colors: [techNavy, cosmicPurple],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
+  /// Aurora glow light — deeper teal → purple (for light theme)
+  static const LinearGradient auroraGlowLight = LinearGradient(
+    colors: [Color(0xFF009E89), Color(0xFF0079A8), Color(0xFF5B30D6)],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
   );
+
+  // ── Context-aware helpers ─────────────────────────────────────────────────
+  static bool _isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  static Color bg(BuildContext context) =>
+      _isDark(context) ? background : backgroundLight;
+
+  static Color surf(BuildContext context) =>
+      _isDark(context) ? surface : surfaceLight;
+
+  static Color surfVar(BuildContext context) =>
+      _isDark(context) ? surfaceVariant : surfaceVariantLight;
+
+  static Color div(BuildContext context) =>
+      _isDark(context) ? divider : dividerLight;
+
+  static Color sidebar(BuildContext context) =>
+      _isDark(context) ? surface : sidebarLight;
+
+  static Color txtPrimary(BuildContext context) =>
+      _isDark(context) ? textPrimary : textPrimaryLight;
+
+  static Color txtSecondary(BuildContext context) =>
+      _isDark(context) ? textSecondary : textSecondaryLight;
+
+  static Color txtHint(BuildContext context) =>
+      _isDark(context) ? textHint : textHintLight;
+
+  static Color accent(BuildContext context) =>
+      _isDark(context) ? teal : tealDark;
+
+  static LinearGradient auroraGlow(BuildContext context) =>
+      _isDark(context) ? auroraGlowDark : auroraGlowLight;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// APP THEME
+// ─────────────────────────────────────────────────────────────────────────────
+
 class AppTheme {
-  // ── DARK THEME ─────────────────────────────────────────────────────────────
+  // ── DARK ──────────────────────────────────────────────────────────────────
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
@@ -77,12 +118,12 @@ class AppTheme {
       colorScheme: const ColorScheme.dark(
         background:   AuroraColors.background,
         surface:      AuroraColors.surface,
-        primary:      AuroraColors.geckoGreen,
-        secondary:    AuroraColors.cosmicPurple,
-        tertiary:     AuroraColors.easterGreen,
+        primary:      AuroraColors.teal,
+        secondary:    AuroraColors.purple,
+        tertiary:     AuroraColors.cyan,
         onBackground: AuroraColors.textPrimary,
         onSurface:    AuroraColors.textPrimary,
-        onPrimary:    AuroraColors.techNavy,
+        onPrimary:    Color(0xFF070B14),
       ),
 
       appBarTheme: const AppBarTheme(
@@ -109,9 +150,7 @@ class AppTheme {
       ),
 
       dividerTheme: const DividerThemeData(
-        color: AuroraColors.divider,
-        thickness: 1,
-        space: 1,
+        color: AuroraColors.divider, thickness: 1, space: 1,
       ),
 
       textTheme: const TextTheme(
@@ -137,7 +176,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(26),
-          borderSide: const BorderSide(color: AuroraColors.geckoGreen, width: 1.2),
+          borderSide: const BorderSide(color: AuroraColors.teal, width: 1.5),
         ),
       ),
 
@@ -145,7 +184,7 @@ class AppTheme {
     );
   }
 
-  // ── LIGHT THEME ────────────────────────────────────────────────────────────
+  // ── LIGHT ─────────────────────────────────────────────────────────────────
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
@@ -155,41 +194,39 @@ class AppTheme {
       colorScheme: const ColorScheme.light(
         background:   AuroraColors.backgroundLight,
         surface:      AuroraColors.surfaceLight,
-        primary:      AuroraColors.cosmicPurple,
-        secondary:    AuroraColors.geckoGreen,
-        tertiary:     AuroraColors.easterGreen,
+        primary:      AuroraColors.tealDark,
+        secondary:    AuroraColors.purpleDeep,
+        tertiary:     AuroraColors.teal,
         onBackground: AuroraColors.textPrimaryLight,
         onSurface:    AuroraColors.textPrimaryLight,
         onPrimary:    Colors.white,
       ),
 
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: AuroraColors.backgroundLight,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: TextStyle(
+        titleTextStyle: const TextStyle(
           color: AuroraColors.textPrimaryLight,
           fontSize: 18,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.3,
         ),
-        iconTheme: IconThemeData(color: AuroraColors.textSecondaryLight),
-        systemOverlayStyle: SystemUiOverlayStyle(
+        iconTheme: const IconThemeData(color: AuroraColors.textSecondaryLight),
+        systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.dark,
         ),
       ),
 
       drawerTheme: const DrawerThemeData(
-        backgroundColor: AuroraColors.surfaceLight,
-        scrimColor: Color(0x44000000),
+        backgroundColor: AuroraColors.sidebarLight,
+        scrimColor: Color(0x33000000),
       ),
 
       dividerTheme: const DividerThemeData(
-        color: AuroraColors.dividerLight,
-        thickness: 1,
-        space: 1,
+        color: AuroraColors.dividerLight, thickness: 1, space: 1,
       ),
 
       textTheme: const TextTheme(
@@ -215,7 +252,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(26),
-          borderSide: const BorderSide(color: AuroraColors.cosmicPurple, width: 1.2),
+          borderSide: const BorderSide(color: AuroraColors.tealDark, width: 1.5),
         ),
       ),
 

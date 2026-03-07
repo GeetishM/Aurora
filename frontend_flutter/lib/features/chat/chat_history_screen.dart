@@ -14,7 +14,7 @@ class ChatHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AuroraColors.background,
+      backgroundColor: AuroraColors.bg(context),
       appBar: _AuroraAppBar(),
       drawer: const _AuroraSidebar(),
       body: Consumer<ChatController>(
@@ -40,25 +40,22 @@ class _AuroraAppBar extends StatelessWidget implements PreferredSizeWidget {
     return Consumer<ChatController>(
       builder: (context, controller, _) {
         return AppBar(
-          backgroundColor: AuroraColors.background,
+          backgroundColor: AuroraColors.bg(context),
           leading: Builder(
             builder: (ctx) => IconButton(
-              icon: const Icon(Icons.menu_rounded,
-                  color: AuroraColors.textSecondary),
+              icon: Icon(Icons.menu_rounded,
+                  color: AuroraColors.txtSecondary(context)),
               onPressed: () => Scaffold.of(ctx).openDrawer(),
               tooltip: 'Menu',
             ),
           ),
-          title: ShaderMask(
-            shaderCallback: (b) => AuroraColors.auroraGlow.createShader(b),
-            child: const Text(
-              'Aurora',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-              ),
+          title: Text(
+            'Aurora',
+            style: TextStyle(
+              color: AuroraColors.accent(context),
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
             ),
           ),
           actions: [
@@ -68,7 +65,7 @@ class _AuroraAppBar extends StatelessWidget implements PreferredSizeWidget {
           ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(1),
-            child: Container(color: AuroraColors.divider, height: 1),
+            child: Container(color: AuroraColors.div(context), height: 1),
           ),
         );
       },
@@ -133,10 +130,10 @@ class _LanguagePicker extends StatelessWidget {
 
     return PopupMenuButton<String>(
       tooltip: 'Select language',
-      color: AuroraColors.surface,
+      color: AuroraColors.surf(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AuroraColors.divider, width: 1),
+        side: BorderSide(color: AuroraColors.div(context), width: 1),
       ),
       offset: const Offset(0, 48),
       child: Padding(
@@ -144,16 +141,16 @@ class _LanguagePicker extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.language_rounded,
-                size: 18, color: AuroraColors.textSecondary),
+            Icon(Icons.language_rounded,
+                size: 18, color: AuroraColors.txtSecondary(context)),
             const SizedBox(width: 5),
             Text(
               currentName,
-              style: const TextStyle(
-                  color: AuroraColors.textSecondary, fontSize: 13),
+              style: TextStyle(
+                  color: AuroraColors.txtSecondary(context), fontSize: 13),
             ),
-            const Icon(Icons.arrow_drop_down_rounded,
-                size: 18, color: AuroraColors.textSecondary),
+            Icon(Icons.arrow_drop_down_rounded,
+                size: 18, color: AuroraColors.txtSecondary(context)),
           ],
         ),
       ),
@@ -169,15 +166,15 @@ class _LanguagePicker extends StatelessWidget {
                     ? Icons.radio_button_checked_rounded
                     : Icons.radio_button_off_rounded,
                 size: 16,
-                color: isSelected ? AuroraColors.teal : AuroraColors.textHint,
+                color: isSelected ? AuroraColors.accent(context) : AuroraColors.txtHint(context),
               ),
               const SizedBox(width: 10),
               Text(
                 entry.key,
                 style: TextStyle(
                   color: isSelected
-                      ? AuroraColors.textPrimary
-                      : AuroraColors.textSecondary,
+                      ? AuroraColors.txtPrimary(context)
+                      : AuroraColors.txtSecondary(context),
                   fontSize: 13,
                   fontWeight:
                       isSelected ? FontWeight.w600 : FontWeight.normal,
@@ -201,7 +198,7 @@ class _AuroraSidebar extends StatelessWidget {
     final box = HiveBoxes.chatHistoryBox();
 
     return Drawer(
-      backgroundColor: AuroraColors.surface,
+      backgroundColor: AuroraColors.sidebar(context),
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -211,23 +208,19 @@ class _AuroraSidebar extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
               child: Row(
                 children: [
-                  ShaderMask(
-                    shaderCallback: (b) =>
-                        AuroraColors.auroraGlow.createShader(b),
-                    child: const Text(
-                      'Aurora',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                      ),
+                  Text(
+                    'Aurora',
+                    style: TextStyle(
+                      color: AuroraColors.accent(context),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
                     ),
                   ),
                   const Spacer(),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded,
-                        color: AuroraColors.textSecondary, size: 20),
+                    icon: Icon(Icons.close_rounded,
+                        color: AuroraColors.txtSecondary(context), size: 20),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
@@ -245,8 +238,8 @@ class _AuroraSidebar extends StatelessWidget {
               child: context.select<ChatController, Widget>(
                 (c) => Text(
                   c.uiLabel('recent_chats').toUpperCase(),
-                  style: const TextStyle(
-                    color: AuroraColors.textHint,
+                  style: TextStyle(
+                    color: AuroraColors.txtHint(context),
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.4,
@@ -267,7 +260,7 @@ class _AuroraSidebar extends StatelessWidget {
                       child: context.select<ChatController, Widget>(
                         (c) => Text(
                           c.uiLabel('no_chats'),
-                          style: const TextStyle(color: AuroraColors.textHint),
+                          style: TextStyle(color: AuroraColors.txtHint(context)),
                         ),
                       ),
                     );
@@ -362,26 +355,26 @@ class _ChatTile extends StatelessWidget {
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AuroraColors.surface,
+        backgroundColor: AuroraColors.surf(context),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AuroraColors.divider),
+          side: BorderSide(color: AuroraColors.div(context)),
         ),
-        title: const Text(
+        title: Text(
           'Delete Chat',
           style: TextStyle(
-              color: AuroraColors.textPrimary, fontWeight: FontWeight.w600),
+              color: AuroraColors.txtPrimary(context), fontWeight: FontWeight.w600),
         ),
         content: Text(
           'Delete "${chat.title}"? This cannot be undone.',
-          style: const TextStyle(
-              color: AuroraColors.textSecondary, fontSize: 14),
+          style: TextStyle(
+              color: AuroraColors.txtSecondary(context), fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel',
-                style: TextStyle(color: AuroraColors.textSecondary)),
+            child: Text('Cancel',
+                style: TextStyle(color: AuroraColors.txtSecondary(context))),
           ),
           Container(
             decoration: BoxDecoration(
@@ -416,11 +409,11 @@ class _ChatTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 2),
       decoration: BoxDecoration(
-        color: isActive ? AuroraColors.surfaceVariant : Colors.transparent,
+        color: isActive ? AuroraColors.surfVar(context) : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         border: isActive
             ? Border.all(
-                color: AuroraColors.teal.withOpacity(0.3), width: 1)
+                color: AuroraColors.accent(context).withOpacity(0.35), width: 1)
             : null,
       ),
       child: ListTile(
@@ -430,7 +423,7 @@ class _ChatTile extends StatelessWidget {
         leading: Icon(
           Icons.chat_bubble_outline_rounded,
           size: 16,
-          color: isActive ? AuroraColors.teal : AuroraColors.textHint,
+          color: isActive ? AuroraColors.accent(context) : AuroraColors.txtHint(context),
         ),
         title: Text(
           displayTitle,
@@ -438,8 +431,8 @@ class _ChatTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color: isActive
-                ? AuroraColors.textPrimary
-                : AuroraColors.textSecondary,
+                ? AuroraColors.txtPrimary(context)
+                : AuroraColors.txtSecondary(context),
             fontSize: 13,
             fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
           ),
@@ -468,7 +461,7 @@ class _ChatTile extends StatelessWidget {
   void _showChatMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AuroraColors.surface,
+      backgroundColor: AuroraColors.surf(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -481,7 +474,7 @@ class _ChatTile extends StatelessWidget {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AuroraColors.divider,
+                color: AuroraColors.div(context),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -491,19 +484,19 @@ class _ChatTile extends StatelessWidget {
                 chat.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AuroraColors.textPrimary,
+                style: TextStyle(
+                  color: AuroraColors.txtPrimary(context),
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-            const Divider(color: AuroraColors.divider, height: 1),
+            Divider(color: AuroraColors.div(context), height: 1),
             ListTile(
-              leading: const Icon(Icons.drive_file_rename_outline_rounded,
-                  color: AuroraColors.teal, size: 20),
-              title: const Text('Rename',
-                  style: TextStyle(color: AuroraColors.textPrimary)),
+              leading: Icon(Icons.drive_file_rename_outline_rounded,
+                  color: AuroraColors.accent(context), size: 20),
+              title: Text('Rename',
+                  style: TextStyle(color: AuroraColors.txtPrimary(context))),
               onTap: () {
                 Navigator.pop(context);
                 _showRenameDialog(context);
@@ -541,12 +534,12 @@ class _ChatMenuButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert_rounded,
-          size: 16, color: AuroraColors.textHint),
-      color: AuroraColors.surface,
+      icon: Icon(Icons.more_vert_rounded,
+          size: 16, color: AuroraColors.txtHint(context)),
+      color: AuroraColors.surf(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AuroraColors.divider, width: 1),
+        side: BorderSide(color: AuroraColors.div(context), width: 1),
       ),
       onSelected: (value) {
         if (value == 'rename') onRename();
@@ -556,13 +549,13 @@ class _ChatMenuButton extends StatelessWidget {
         PopupMenuItem(
           value: 'rename',
           child: Row(
-            children: const [
-              Icon(Icons.drive_file_rename_outline_rounded,
+            children: [
+              const Icon(Icons.drive_file_rename_outline_rounded,
                   size: 16, color: AuroraColors.teal),
-              SizedBox(width: 10),
+              const SizedBox(width: 10),
               Text('Rename',
                   style: TextStyle(
-                      color: AuroraColors.textPrimary, fontSize: 13)),
+                      color: AuroraColors.txtPrimary(context), fontSize: 13)),
             ],
           ),
         ),
@@ -630,29 +623,29 @@ class _RenameDialogState extends State<_RenameDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: AuroraColors.surface,
+      backgroundColor: AuroraColors.surf(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AuroraColors.divider),
+        side: BorderSide(color: AuroraColors.div(context)),
       ),
-      title: const Text(
+      title: Text(
         'Rename Chat',
         style: TextStyle(
-            color: AuroraColors.textPrimary, fontWeight: FontWeight.w600),
+            color: AuroraColors.txtPrimary(context), fontWeight: FontWeight.w600),
       ),
       content: TextField(
         controller: _controller,
         autofocus: true,
-        style: const TextStyle(color: AuroraColors.textPrimary),
-        cursorColor: AuroraColors.teal,
+        style: TextStyle(color: AuroraColors.txtPrimary(context)),
+        cursorColor: AuroraColors.accent(context),
         decoration: InputDecoration(
           hintText: 'Enter chat name',
-          hintStyle: const TextStyle(color: AuroraColors.textHint),
+          hintStyle: TextStyle(color: AuroraColors.txtHint(context)),
           filled: true,
-          fillColor: AuroraColors.surfaceVariant,
+          fillColor: AuroraColors.surfVar(context),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AuroraColors.divider),
+            borderSide: BorderSide(color: AuroraColors.div(context)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -660,7 +653,7 @@ class _RenameDialogState extends State<_RenameDialog> {
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AuroraColors.divider),
+            borderSide: BorderSide(color: AuroraColors.div(context)),
           ),
         ),
         onSubmitted: (_) => _submit(),
@@ -731,21 +724,19 @@ class _WelcomeSplash extends StatelessWidget {
                 size: 38, color: Colors.white),
           ),
           const SizedBox(height: 28),
-          ShaderMask(
-            shaderCallback: (b) => AuroraColors.auroraGlow.createShader(b),
-            child: const Text(
-              'Aurora',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 36,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2),
+          Text(
+            'Aurora',
+            style: TextStyle(
+              color: AuroraColors.accent(context),
+              fontSize: 36,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2,
             ),
           ),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             "Your women's health companion",
-            style: TextStyle(color: AuroraColors.textSecondary, fontSize: 15),
+            style: TextStyle(color: AuroraColors.txtSecondary(context), fontSize: 15),
           ),
           const SizedBox(height: 40),
           _StartButton(),
