@@ -175,5 +175,8 @@ async def chat_socket(ws: WebSocket):
             history = await asyncio.to_thread(maybe_summarise_history, history)
 
     finally:
-        await ws.close()
-        logger.info("WebSocket closed cleanly")
+        try:
+            await ws.close()
+            logger.info("WebSocket closed cleanly")
+        except RuntimeError:
+            logger.info("WebSocket already closed")
