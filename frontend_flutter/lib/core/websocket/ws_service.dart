@@ -13,18 +13,10 @@ class WebSocketService {
   ChunkCallback? _onChunk;
   FinalCallback? _onFinal;
 
-  // ── Toggle this when switching between emulator and real phone ────────────
-  static const bool _useRealPhone = true; // ← false = emulator, true = real phone
-  static const String _realPhoneIp = '172.31.243.93'; // ← your laptop's IP
-  // ─────────────────────────────────────────────────────────────────────────
-
   static String get _wsUrl {
     if (kIsWeb) return 'ws://localhost:8000/ws/chat';
-    if (Platform.isAndroid) {
-      if (_useRealPhone) return 'ws://$_realPhoneIp:8000/ws/chat';
-      return 'ws://10.0.2.2:8000/ws/chat'; // emulator
-    }
-    if (Platform.isIOS) return 'ws://127.0.0.1:8000/ws/chat';
+    if (Platform.isAndroid) return 'ws://10.0.2.2:8000/ws/chat';
+    if (Platform.isIOS) return 'ws://localhost:8000/ws/chat';
     return 'ws://localhost:8000/ws/chat';
   }
 
