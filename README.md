@@ -142,9 +142,14 @@ Evaluated using the **RAGAS framework** across 15 women's health queries coverin
 | ![Streamlit Chat](assets/streamlit_chat.png) | ![Streamlit Lang](assets/streamlit_lang.png) |
 
 ### 📱 Flutter Mobile App
-| Home | Chat | Voice Input | Dark Theme |
+
+| Dark Home | Light Home | Topic Grid | Category Questions |
 |---|---|---|---|
-| ![Home](assets/flutter_home.png) | ![Chat](assets/flutter_chat.png) | ![Voice](assets/flutter_voice.png) | ![Dark](assets/flutter_dark.png) |
+| ![Dark Home](assets/flutter_home_dark.png) | ![Light Home](assets/flutter_home_light.png) | ![Topics](assets/flutter_topics.png) | ![Category](assets/flutter_category.png) |
+
+| AI Response | Voice Recording | Speech to Text | Language Picker |
+|---|---|---|---|
+| ![Chat](assets/flutter_chat.png) | ![Recording](assets/flutter_recording.png) | ![Transcribing](assets/flutter_transcribing.png) | ![Languages](assets/flutter_languages.png) |
 
 ---
 
