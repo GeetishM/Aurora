@@ -1,4 +1,5 @@
 import asyncio
+import socket
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -8,36 +9,36 @@ from .translate import translate_from_english
 
 load_dotenv()
 
-ALLOWED_ORIGINS = [
-    "http://localhost",
-    "http://localhost:8080",
-    "http://localhost:3000",
-    "http://127.0.0.1:8080",
-]
-
 app = FastAPI(title="Aurora Backend")
 
-# ✅ Import AFTER app is created — fixes NameError
+# ✅ Import AFTER app is created
 from app.routers.transcribe import router as transcribe_router
+
 app.include_router(transcribe_router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=["*"],
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
-# ── WebSocket ─────────────────────────────────────────────────────────────────
+@app.on_event("startup")
+async def print_local_ip():
+    try:
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+    except Exception:
+        local_ip = "unknown"
+    
+
 
 @app.websocket("/ws/chat")
 async def chat(ws: WebSocket):
     await chat_socket(ws)
 
-
-# ── Translate endpoint ────────────────────────────────────────────────────────
 
 class TranslateRequest(BaseModel):
     text:     str
@@ -53,8 +54,6 @@ async def translate(req: TranslateRequest):
     )
     return TranslateResponse(translated=result)
 
-
-# ── Health ────────────────────────────────────────────────────────────────────
 
 @app.get("/")
 def health():

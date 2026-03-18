@@ -1,4 +1,3 @@
-// lib/features/chat/chat_screen.dart
 
 import 'dart:async';
 import 'dart:convert';
@@ -13,6 +12,7 @@ import '../../models/message.dart';
 import '../../state/chat_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../core/config/server_config.dart';
+import '../../core/tts/tts_service.dart';  // ← NEW
 
 // ── ChatView ──────────────────────────────────────────────────────────────────
 
@@ -435,18 +435,44 @@ class _UserBubble extends StatelessWidget {
   }
 }
 
-class _AssistantBubble extends StatelessWidget {
+// ── ASSISTANT BUBBLE — with TTS speaker button ────────────────────────────────
+
+class _AssistantBubble extends StatefulWidget {
   final String text;
   final bool isStreaming;
   const _AssistantBubble(
       {required this.text, required this.isStreaming});
 
   @override
+  State<_AssistantBubble> createState() => _AssistantBubbleState();
+}
+
+class _AssistantBubbleState extends State<_AssistantBubble> {
+  final TtsService _tts = TtsService.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _tts.onStateChanged = () {
+      if (mounted) setState(() {});
+    };
+  }
+
+  @override
+  void dispose() {
+    if (_tts.onStateChanged != null) _tts.onStateChanged = null;
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isLoading = _tts.isLoadingText(widget.text);
+    final isPlaying = _tts.isPlayingText(widget.text);
+
     return GestureDetector(
       onLongPress: () {
-        if (text.isNotEmpty) {
-          Clipboard.setData(ClipboardData(text: text));
+        if (widget.text.isNotEmpty) {
+          Clipboard.setData(ClipboardData(text: widget.text));
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: const Text('Copied to clipboard'),
             duration: const Duration(seconds: 1),
@@ -457,8 +483,7 @@ class _AssistantBubble extends StatelessWidget {
       child: Container(
         constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.78),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: AuroraColors.surfVar(context),
           borderRadius: const BorderRadius.only(
@@ -469,21 +494,83 @@ class _AssistantBubble extends StatelessWidget {
           ),
           border: Border.all(color: AuroraColors.div(context), width: 1),
         ),
-        child: isStreaming && text.isEmpty
+        child: widget.isStreaming && widget.text.isEmpty
             ? const _TypingIndicator()
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(text,
+                  Text(widget.text,
                       style: TextStyle(
                         color:    AuroraColors.txtPrimary(context),
                         fontSize: 14.5,
                         height:   1.55,
                       )),
-                  if (isStreaming)
+                  if (widget.isStreaming)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child:   _CursorBlink(),
+                    ),
+
+                  // ── TTS speaker button — only after streaming done ────
+                  if (!widget.isStreaming && widget.text.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: GestureDetector(
+                        onTap: () => _tts.speak(widget.text),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: (isPlaying || isLoading)
+                                ? AuroraColors.teal.withOpacity(0.12)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: (isPlaying || isLoading)
+                                  ? AuroraColors.teal.withOpacity(0.5)
+                                  : AuroraColors.div(context),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isLoading)
+                                SizedBox(
+                                  width: 12, height: 12,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 1.5,
+                                      color: AuroraColors.teal),
+                                )
+                              else
+                                Icon(
+                                  isPlaying
+                                      ? Icons.stop_rounded
+                                      : Icons.volume_up_rounded,
+                                  size: 14,
+                                  color: (isPlaying || isLoading)
+                                      ? AuroraColors.teal
+                                      : AuroraColors.txtHint(context),
+                                ),
+                              const SizedBox(width: 5),
+                              Text(
+                                isLoading
+                                    ? 'Loading...'
+                                    : isPlaying
+                                        ? 'Stop'
+                                        : 'Listen',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: (isPlaying || isLoading)
+                                      ? AuroraColors.teal
+                                      : AuroraColors.txtHint(context),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                 ],
               ),
@@ -642,23 +729,18 @@ class _InputBarState extends State<_InputBar>
 
   final _recorder = AudioRecorder();
 
-  // ── Recording timer (plain dart:async — no recursive animation) ──────────
   int    _recordSeconds = 0;
   Timer? _ticker;
 
-  // ── Waveform bars ─────────────────────────────────────────────────────────
   late final List<AnimationController> _barCtrls;
   late final List<Animation<double>>   _barAnims;
-
-  // ── Transcribing shimmer ──────────────────────────────────────────────────
-  late final AnimationController _shimmerCtrl;
+  late final AnimationController       _shimmerCtrl;
 
   @override
   void initState() {
     super.initState();
     widget.controller.addListener(_onTextChanged);
 
-    // Waveform bars — 5 bars at slightly different speeds
     _barCtrls = List.generate(5, (i) {
       return AnimationController(
         vsync: this,
@@ -672,7 +754,6 @@ class _InputBarState extends State<_InputBar>
       );
     });
 
-    // Shimmer for transcribing bar
     _shimmerCtrl = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 1200),
     )..repeat();
@@ -712,7 +793,6 @@ class _InputBarState extends State<_InputBar>
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
-  // ── Start recording ───────────────────────────────────────────────────────
   Future<void> _startRecording() async {
     final granted = await _recorder.hasPermission();
     if (!granted) {
@@ -737,7 +817,6 @@ class _InputBarState extends State<_InputBar>
     _startTicker();
   }
 
-  // ── Stop → transcribe ─────────────────────────────────────────────────────
   Future<void> _stopAndTranscribe() async {
     _stopTicker();
     final path = await _recorder.stop();
@@ -797,7 +876,6 @@ class _InputBarState extends State<_InputBar>
     }
   }
 
-  // ── Cancel recording without transcribing ─────────────────────────────────
   Future<void> _cancelRecording() async {
     _stopTicker();
     await _recorder.stop();
@@ -807,7 +885,6 @@ class _InputBarState extends State<_InputBar>
     });
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -816,14 +893,10 @@ class _InputBarState extends State<_InputBar>
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(height: 1, color: AuroraColors.div(context)),
-
-          // ── Recording UI ─────────────────────────────────────────────
           if (_isRecording)
             _buildRecordingBar()
-          // ── Transcribing UI ──────────────────────────────────────────
           else if (_isTranscribing)
             _buildTranscribingBar()
-          // ── Normal input UI ──────────────────────────────────────────
           else
             _buildNormalInput(),
         ],
@@ -831,7 +904,6 @@ class _InputBarState extends State<_InputBar>
     );
   }
 
-  // ── Normal input bar ──────────────────────────────────────────────────────
   Widget _buildNormalInput() {
     final hintText =
         context.watch<ChatController>().uiLabel('message_hint');
@@ -877,7 +949,6 @@ class _InputBarState extends State<_InputBar>
   }
 
   Widget _buildRightButton() {
-    // Streaming → spinner
     if (widget.isStreaming) {
       return _CircleButton(
         color: AuroraColors.surfVar(context),
@@ -888,7 +959,6 @@ class _InputBarState extends State<_InputBar>
         ),
       );
     }
-    // Has text → send
     if (_hasText) {
       return _CircleButton(
         gradient: AuroraColors.userBubble,
@@ -900,7 +970,6 @@ class _InputBarState extends State<_InputBar>
             size: 20, color: Colors.white),
       );
     }
-    // Idle → mic
     return _CircleButton(
       color: AuroraColors.surfVar(context),
       onTap: _startRecording,
@@ -908,12 +977,6 @@ class _InputBarState extends State<_InputBar>
           size: 20, color: AuroraColors.txtSecondary(context)),
     );
   }
-
-  // ── RECORDING BAR ─────────────────────────────────────────────────────────
-  //
-  //  ┌──────────────────────────────────────────────────────┐
-  //  │  ✕   ▐▌ ▐▌ ▐▌ ▐▌ ▐▌   00:07        [●  STOP]       │
-  //  └──────────────────────────────────────────────────────┘
 
   Widget _buildRecordingBar() {
     return Container(
@@ -940,7 +1003,6 @@ class _InputBarState extends State<_InputBar>
       ),
       child: Row(
         children: [
-          // Cancel button
           GestureDetector(
             onTap: _cancelRecording,
             child: Container(
@@ -953,10 +1015,7 @@ class _InputBarState extends State<_InputBar>
                   size: 16, color: Colors.white),
             ),
           ),
-
           const SizedBox(width: 14),
-
-          // Animated waveform bars
           Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -975,10 +1034,7 @@ class _InputBarState extends State<_InputBar>
               );
             }),
           ),
-
           const SizedBox(width: 14),
-
-          // Timer
           Text(
             _timerLabel,
             style: const TextStyle(
@@ -988,10 +1044,7 @@ class _InputBarState extends State<_InputBar>
               fontFeatures: [FontFeature.tabularFigures()],
             ),
           ),
-
           const Spacer(),
-
-          // Stop + send button
           GestureDetector(
             onTap: _stopAndTranscribe,
             child: Container(
@@ -1034,12 +1087,6 @@ class _InputBarState extends State<_InputBar>
     );
   }
 
-  // ── TRANSCRIBING BAR ──────────────────────────────────────────────────────
-  //
-  //  ┌─────────────────────────────────────────────┐
-  //  │  ✦  Converting speech to text...  ░░░░░░░░  │
-  //  └─────────────────────────────────────────────┘
-
   Widget _buildTranscribingBar() {
     return Container(
       margin: EdgeInsets.fromLTRB(
@@ -1059,7 +1106,6 @@ class _InputBarState extends State<_InputBar>
       ),
       child: Row(
         children: [
-          // Animated teal sparkle icon
           AnimatedBuilder(
             animation: _shimmerCtrl,
             builder: (_, __) {
@@ -1072,9 +1118,7 @@ class _InputBarState extends State<_InputBar>
               );
             },
           ),
-
           const SizedBox(width: 14),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1089,7 +1133,6 @@ class _InputBarState extends State<_InputBar>
                   ),
                 ),
                 const SizedBox(height: 6),
-                // Shimmer progress bar
                 AnimatedBuilder(
                   animation: _shimmerCtrl,
                   builder: (_, __) {
@@ -1108,10 +1151,7 @@ class _InputBarState extends State<_InputBar>
               ],
             ),
           ),
-
           const SizedBox(width: 14),
-
-          // Spinner
           SizedBox(
             width: 20, height: 20,
             child: CircularProgressIndicator(

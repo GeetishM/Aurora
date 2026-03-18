@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend_flutter/core/tts/tts_service.dart';
 import 'package:frontend_flutter/state/theme_controller.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,7 +11,8 @@ import 'state/chat_controller.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await HiveService.init();
-
+  await TtsService.instance.init();
+  
   final prefs     = await SharedPreferences.getInstance();
   final savedLang = prefs.getString('aurora_language') ?? 'en';
   final themeMode = await ThemeController.load();
