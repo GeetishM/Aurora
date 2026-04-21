@@ -62,17 +62,14 @@ Aurora speaks like a **caring, informed friend** — never clinical or cold — 
       <p><code>Streamlit_Web_App/</code></p>
       <p>The initial prototype used to validate the RAG pipeline and multilingual capabilities. Served as the foundation for testing query routing, RAGAS evaluations, and fine-tuning the pipeline before mobile development.</p>
       <h4>Run the Streamlit app:</h4>
-
-```bash
-cd Streamlit_Web_App
-streamlit run app.py
-```
+      <pre><code>cd Streamlit_Web_App
+streamlit run app.py</code></pre>
     </td>
     <td width="50%" valign="top">
       <h3>📱 Phase 2 — Flutter + FastAPI</h3>
       <p><code>Backend_FastAPI/ + frontend_flutter/</code></p>
       <p>The production version — a full Flutter mobile app with real-time WebSocket streaming, voice input, dark/light theme, persistent chat history, and a decoupled FastAPI backend.</p>
-      <h4>Key upgrade:</h4>
+      <h4>Key upgrades:</h4>
       <ul>
         <li>⚡ Real-time token streaming</li>
         <li>🎙️ Voice-to-text via Whisper</li>
