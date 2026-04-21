@@ -371,33 +371,25 @@ flutter pub get
 ---
 
 ## ▶️ Running the App
-
 <table>
   <tr>
     <td width="50%" valign="top">
       <h3>⚡ Option A — Streamlit (quickest)</h3>
-
-```bash
-cd Streamlit_Web_App
-streamlit run app.py
-```
+      <pre><code>cd Streamlit_Web_App
+streamlit run app.py</code></pre>
     </td>
     <td width="50%" valign="top">
       <h3>📱 Option B — Flutter Mobile App</h3>
-
-```bash
-# Terminal 1 — Start Ollama
+      <pre><code># Terminal 1 — Start Ollama
 ollama serve
 
 # Terminal 2 — Start FastAPI backend
 cd Backend_FastAPI
-uvicorn app.main:app --reload \
-  --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # Terminal 3 — Start Flutter app
 cd frontend_flutter
-flutter run
-```
+flutter run</code></pre>
     </td>
   </tr>
 </table>
